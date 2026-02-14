@@ -31,6 +31,9 @@
         "projectId": ""
       }
     },
-    "owner": ""
+    "owner": "",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
