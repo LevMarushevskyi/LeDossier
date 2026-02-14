@@ -32,10 +32,6 @@ export default function IdeaVault({ navigation }) {
     setDescription('');
   };
 
-  const addBulletPoint = () => {
-    setDescription(prev => prev + (prev ? '\n' : '') + '• ');
-  };
-
   const handleDelete = () => {
     setShowPanel(false);
     setName('');
@@ -137,18 +133,13 @@ export default function IdeaVault({ navigation }) {
               value={name}
               onChangeText={setName}
             />
-            <View style={styles.descriptionContainer}>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Description"
-                value={description}
-                onChangeText={setDescription}
-                multiline
-              />
-              <TouchableOpacity style={styles.bulletButton} onPress={addBulletPoint}>
-                <Text style={styles.bulletButtonText}>•</Text>
-              </TouchableOpacity>
-            </View>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Description"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+            />
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
                 <Text style={styles.confirmButtonText}>Confirm</Text>
@@ -247,26 +238,6 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: 'top',
-  },
-  descriptionContainer: {
-    position: 'relative',
-    marginBottom: 15,
-  },
-  bulletButton: {
-    position: 'absolute',
-    right: 10,
-    bottom: 10,
-    backgroundColor: '#0C001A',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bulletButtonText: {
-    color: '#FFFDEE',
-    fontSize: 20,
-    fontWeight: 'bold',
   },
   buttonRow: {
     flexDirection: 'row',

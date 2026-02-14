@@ -43,16 +43,18 @@ export default function Home({ navigation }) {
         vec2 uv = gl_FragCoord.xy / resolution;
         
         float wave = sin(gl_FragCoord.x * 0.02) * 10.0;
-        float lineSpacing = 10.0;
+        float lineSpacing = 20.0;
         float linePattern = mod(gl_FragCoord.y + wave, lineSpacing);
-        float line = step(linePattern, 4.0);
         
         float gradient = 1.0 - uv.y;
-        float alpha = gradient * 0.3;
+        float lineWidth = 10.0 * gradient;
+        
+        float edge = abs(linePattern - lineWidth * 0.5);
+        float blur = smoothstep(lineWidth * 0.5 - 2.0, lineWidth * 0.5, edge);
         
         vec3 baseColor = vec3(0.047, 0.0, 0.102);
         vec3 lineColor = vec3(1.0, 0.992, 0.933);
-        vec3 color = mix(baseColor, lineColor, line * alpha);
+        vec3 color = mix(lineColor, baseColor, blur);
         
         gl_FragColor = vec4(color, 1.0);
       }
