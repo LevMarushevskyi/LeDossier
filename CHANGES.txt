@@ -1,0 +1,208 @@
+LE DOSSIER - PROJECT CHANGES DOCUMENTATION
+==========================================
+
+SETUP & DEPENDENCIES [2026-02-14 05:52]
+-------------------
+- Installed Node.js and npm
+- Installed Expo and React Native dependencies
+- Installed Google Fonts: Petit Formal Script (titles) and Noto Serif (body text)
+- Installed react-native-svg for SVG support
+- Installed expo-gl for WebGL shader support
+- Installed React Navigation for page navigation
+
+PAGES CREATED [2026-02-14 05:52]
+-------------
+1. Home.tsx - Main landing page
+2. IdeaVault.tsx - Secondary page
+3. Notification.tsx - Notification page (blank)
+4. Setting.tsx - Settings page (blank)
+
+HOME PAGE DESIGN [2026-02-14 05:52]
+----------------
+Background:
+- Dark background color: #0C001A
+- WebGL shader with wavy horizontal lines in #FFFDEE
+- Lines fade from top (more visible) to bottom (less visible)
+- Line spacing: 10px, Line width: 4px
+
+Title Section:
+- Text: "Le Dossier"
+- Font: Petit Formal Script, 72px, bold
+- Color: #FFFDEE
+- Positioned at top 2.5% margin, takes up 15% of page height
+- Horizontally stretched with scaleX: 2.5
+- Letter spacing: 10px
+- Background rectangle in #0C001A behind title spanning full width
+
+Center Shape:
+- Combined triangle + rectangle shape
+- Rectangle: 50% page width, 30% page height
+- Triangle: Right triangle on top, half the height of rectangle
+- Color: #FFFDEE
+- Rounded corners: 10px border radius
+- Positioned: Center of screen
+- Overlay: Wavy line pattern in #0C001A fading left to right
+- Triangle and rectangle overlap by 20px for seamless connection
+
+Sign In Button:
+- Located on right 50% of the center shape
+- Positioned 10% down from top of shape
+- Text: "SIGN IN" displayed vertically (one letter per line)
+- Font: Noto Serif, 48px, bold
+- Color: #0C001A
+- Hover effect: Animated wavy vertical lines in #FFFDEE
+- Lines move continuously with seamless tiling
+- Lines fade from left (visible) to right (transparent)
+- Line width: 8px to match background
+- Navigation: Clicking navigates to IdeaVault page
+
+IDEA VAULT PAGE [2026-02-14 05:52]
+---------------
+- Dark background: #0C001A
+- Text: "Idea Vault" in #FFFDEE
+- Test button to navigate back to Home
+
+NAVIGATION [2026-02-14 05:52]
+----------
+- React Navigation with Native Stack Navigator
+- No headers shown
+- Home screen is default
+- Sign In button navigates to IdeaVault
+- Test button on IdeaVault navigates back to Home
+
+COLOR PALETTE [2026-02-14 05:52]
+-------------
+- Primary Background: #0C001A (dark purple/navy)
+- Primary Text/Accent: #FFFDEE (cream/off-white)
+
+FONTS [2026-02-14 05:52]
+-----
+- Titles/Headers: Petit Formal Script (400 Regular)
+- Body Text: Noto Serif (400 Regular)
+
+TECHNICAL NOTES [2026-02-14 05:52]
+---------------
+- WebGL shader uses expo-gl for background effect
+- GLView remounts on navigation using state-based key
+- Animated API used for smooth line movement on hover
+- SVG patterns with quadratic curves for wavy lines
+- Gradients applied using SVG linearGradient with opacity
+- All pages use same background color for consistency
+- Responsive design using useWindowDimensions hook
+
+GIT COMMITS [2026-02-14 05:52]
+-----------
+- Commit: "set up pages" - Initial page setup with navigation and styling
+
+BUG FIXES & CHANGES
+-------------------
+
+[2026-02-14 05:52] Fixed wavy line pattern on rectangle+triangle not persisting after navigation
+  - Changed gradient mask to use proper white color stops with opacity
+  - Used nested masks: shapeMask for boundary, fadeMask for gradient fade
+  - Pattern now properly displays and persists across navigation
+
+[2026-02-14 05:52] Fixed sign-in button hover animation not persisting after navigation
+  - Changed gradient to use white color stops with stopOpacity instead of opacity-only stops
+  - Wrapped pattern rect in mask using the gradient
+  - Invalid opacity=\"url(#gradient)\" replaced with mask=\"url(#mask)\" pattern
+
+[2026-02-14 05:52] Fixed center shape wavy pattern not persisting after navigation
+  - Added state-based key to SVG element that increments on mount
+  - Changed from nested masks to clipPath for shape boundary
+  - Applied gradient as overlay rect instead of mask for fade effect
+  - Pattern now persists properly after navigation
+[2026-02-14 05:52] Fixed hover animation to continue forever
+  - Moved animation start to component mount instead of hover trigger
+  - Animation runs continuously, hover only shows/hides the animated layers
+
+[2026-02-14 05:52] Replaced SVG Pattern elements with direct path rendering
+  - React Native SVG has issues with Pattern persistence after navigation
+  - Now renders wavy lines as individual path elements using Array.map
+  - Both center shape and hover animation use direct rendering
+  - Patterns now persist correctly after navigation
+
+[2026-02-14 05:52] Removed all WebGL shader logic from Home.tsx
+  - Deleted GLView component and onContextCreate function
+  - Removed expo-gl import
+  - Removed glKey state
+  - Background now uses plain backgroundColor style
+
+[2026-02-14 05:52] Reinstated background WebGL shader with wavy horizontal lines
+  - Added back GLView, expo-gl import, onContextCreate function, glKey state
+  - Background shader persists with key-based remounting
+[2026-02-14 05:52] Removed all animation logic from sign-in button
+  - Deleted Animated.View components with wavy line patterns
+  - Removed animValue, translateX, and animation loop
+  - Button now shows plain text only
+
+[2026-02-14 05:52] Changed rectangle+triangle shape color back to #0C001A (dark background)
+  - Removed wavy line overlay pattern
+  - Sign in text color changed to #FFFDEE (cream) for visibility
+
+[2026-02-14 05:52] Corrected rectangle+triangle shape to #FFFDEE (cream) with #0C001A (dark) text
+
+[2026-02-14 05:52] Added light rectangle to IdeaVault page
+  - Rectangle spans 80% of screen width and height
+  - Border uses same WebGL shader as Home page background (wavy horizontal lines)
+  - Border width: 10px
+  - Inner rectangle color: #FFFDEE (cream)
+  - Shader border created using GLView with inner rect using margin
+
+[2026-02-14 05:52] Added navigation buttons to IdeaVault page
+  - Two rounded cream square buttons in top left corner
+  - Top button (N): Navigates to Notification page
+  - Bottom button (S): Navigates to Setting page
+  - Button size: 50x50px, border radius: 10px
+  - Button color: #FFFDEE, text color: #0C001A
+  - Positioned at top: 20px and 80px, left: 20px
+[2026-02-14 05:52] Added back buttons to Notification and Setting pages
+  - Both pages now have "Back to Idea Vault" button
+  - Navigates back to IdeaVault page
+
+[2026-02-14 05:52] Added Notification and Setting screens to navigation stack in App.tsx
+  - Imported both screen components
+  - Registered as Stack.Screen components
+  - Navigation buttons now properly change pages
+
+[2026-02-14 05:52] Added "Add Idea" button below rectangle on IdeaVault page
+  - Opens modal panel with name and description text inputs
+  - Panel has cream background (#FFFDEE) with dark text
+  - Confirm button logs name and description to console and closes panel
+  - Delete button closes panel and clears inputs
+  - Modal has semi-transparent dark overlay
+
+[2026-02-14 05:52] Removed non-palette colors from IdeaVault page
+  - Changed input background from white to #FFFDEE
+  - Changed button colors from default/red to #0C001A
+  - All colors now use only #0C001A (dark) and #FFFDEE (cream)
+
+[2026-02-14 05:52] Replaced Button components with TouchableOpacity for custom styling
+  - Add Idea and test buttons now use #FFFDEE background with #0C001A text
+  - Confirm and Delete buttons use #0C001A background with #FFFDEE text
+  - Removed all default blue button colors
+
+[2026-02-14 05:52] Changed "Add Idea" button text to "IDEATE"
+
+[2026-02-14 05:52] Tilted IdeaVault border shader lines by 30 degrees
+  - Applied rotation matrix to fragment coordinates
+  - Lines now appear at 30-degree angle instead of horizontal
+
+[2026-02-14 05:52] Added temporary storage for ideas on IdeaVault page
+  - Created ideas state array to store idea objects
+  - Each idea object contains: name, description, and unique id (timestamp)
+  - Confirm button now creates and stores idea object in state
+  - Console logs show stored idea and all ideas array
+
+[2026-02-14 05:52] Added validation for ideate panel
+  - Alert pops up if confirm pressed without both name and description
+  - Checks for empty or whitespace-only inputs
+[2026-02-14 05:52] Added bullet point button to description field
+  - Circular button with bullet symbol in bottom right of description input
+  - Adds bullet point character to description when pressed
+  - Button styled with #0C001A background and #FFFDEE text
+
+[2026-02-14 05:52] Fixed validation alert not showing
+  - Replaced Alert.alert with custom modal for cross-platform compatibility
+  - Custom alert styled with project colors (#FFFDEE background, #0C001A text)
+  - Alert now properly displays when name or description is missing

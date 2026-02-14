@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Button } from 'react-native';
 
-export default function Setting() {
+export default function Setting({ navigation }) {
   return (
     <View style={styles.container}>
-      <Text>Setting</Text>
+      <Text style={styles.text}>Setting</Text>
+      <Button title="Back to Idea Vault" onPress={() => navigation.navigate('IdeaVault')} />
     </View>
   );
 }
@@ -14,5 +15,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#0C001A',
+  },
+  text: {
+    color: '#FFFDEE',
+    marginBottom: 20,
   },
 });
