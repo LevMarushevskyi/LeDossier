@@ -354,3 +354,20 @@ BUG FIXES & CHANGES
   - Automatically navigates to IdeaVault on successful authentication
   - Added error handling and error message display for failed authentication
   - Deep link callback format: ledossier://auth with query parameters
+
+[2026-02-14 22:00] Implemented cross-platform authentication (web and mobile)
+  - Updated Flask /authorize endpoint to support both platforms
+  - For MOBILE (iOS/Android): Returns HTML that triggers deep link (ledossier://)
+  - For WEB: Returns HTML that uses postMessage and localStorage for communication
+  - Flask success page styled with app theme (#0C001A background, #FFFDEE text)
+  - Fixed userinfo access to use oauth.oidc.userinfo() instead of token['userinfo']
+  - Updated SignIn.tsx with platform detection using Platform.OS
+  - MOBILE: Uses existing deep link listener with Linking API
+  - WEB: Opens auth in popup window and listens for postMessage events
+  - WEB: Also polls localStorage as backup communication method
+  - Auto-closes popup window after successful web authentication
+  - Shows helpful messages: "Authentication successful! Redirecting..."
+  - Fallback manual close option if automatic redirect fails
+  - Fixed textDecoration style error (changed to textDecorationLine)
+  - Custom URL schemes (ledossier://) work on mobile but not web browsers
+  - Web authentication uses window.open popup with cross-window messaging

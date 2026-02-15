@@ -31,10 +31,142 @@ def login():
 
 @app.route('/authorize')
 def authorize():
-    token = oauth.oidc.authorize_access_token()
-    user = token['userinfo']
-    session['user'] = user
-    return redirect(url_for('index'))
+    # Exchange authorization code for tokens
+    oauth.oidc.authorize_access_token()
+
+    # Fetch userinfo from Cognito
+    userinfo = oauth.oidc.userinfo()
+    session['user'] = userinfo
+
+    # Get user email
+    email = userinfo.get('email', 'user')
+    deep_link = f'ledossier://auth?email={email}&success=true'
+
+    # Return HTML page that works for both mobile and web
+    # Mobile: JavaScript triggers deep link (ledossier://)
+    # Web: JavaScript uses postMessage and localStorage to communicate with parent window
+    return f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Authentication Successful</title>
+        <meta charset="utf-8">
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-color: #0C001A;
+                color: #FFFDEE;
+                text-align: center;
+            }}
+            .container {{
+                padding: 40px;
+                max-width: 500px;
+            }}
+            h1 {{
+                margin-bottom: 20px;
+                font-size: 28px;
+            }}
+            p {{
+                margin: 15px 0;
+                line-height: 1.6;
+            }}
+            a {{
+                color: #FFFDEE;
+                text-decoration: underline;
+            }}
+            .email {{
+                font-weight: bold;
+                color: #FFFDEE;
+                background-color: rgba(255, 253, 238, 0.1);
+                padding: 5px 10px;
+                border-radius: 5px;
+                display: inline-block;
+                margin: 10px 0;
+            }}
+            .button {{
+                display: inline-block;
+                margin-top: 20px;
+                padding: 12px 24px;
+                background-color: #FFFDEE;
+                color: #0C001A;
+                text-decoration: none;
+                border-radius: 5px;
+                font-weight: bold;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>✓ Authentication Successful!</h1>
+            <p>Welcome, <span class="email">{email}</span></p>
+            <p id="status">Redirecting back to Le Dossier...</p>
+            <p style="font-size: 14px; margin-top: 30px; opacity: 0.8;">
+                If you're not redirected automatically, you can close this window and return to the app.
+            </p>
+        </div>
+        <script>
+            const authData = {{
+                email: "{email}",
+                success: true,
+                timestamp: new Date().toISOString()
+            }};
+
+            // For MOBILE: Try to trigger deep link
+            function tryDeepLink() {{
+                try {{
+                    window.location.href = "{deep_link}";
+
+                    // Also try opening in a new context
+                    setTimeout(function() {{
+                        window.open("{deep_link}", "_self");
+                    }}, 500);
+                }} catch (e) {{
+                    console.log("Deep link not supported on this platform");
+                }}
+            }}
+
+            // For WEB: Use postMessage and localStorage to communicate
+            function notifyWebApp() {{
+                try {{
+                    // Store auth data in localStorage for web platform
+                    localStorage.setItem('ledossier_auth', JSON.stringify(authData));
+
+                    // If opened in a popup, notify the parent window
+                    if (window.opener) {{
+                        window.opener.postMessage({{
+                            type: 'LEDOSSIER_AUTH_SUCCESS',
+                            data: authData
+                        }}, '*');
+
+                        // Update status and close window after delay
+                        document.getElementById('status').textContent =
+                            'Authentication complete! This window will close shortly...';
+
+                        setTimeout(function() {{
+                            window.close();
+                        }}, 2000);
+                    }} else {{
+                        // Not a popup, user needs to close manually
+                        document.getElementById('status').textContent =
+                            'You can now close this tab and return to Le Dossier.';
+                    }}
+                }} catch (e) {{
+                    console.log("Web communication methods not available");
+                }}
+            }}
+
+            // Try both methods
+            tryDeepLink();  // For mobile
+            notifyWebApp(); // For web
+        </script>
+    </body>
+    </html>
+    '''
 
 @app.route('/logout')
 def logout():

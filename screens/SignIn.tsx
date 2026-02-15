@@ -15,22 +15,67 @@ export default function SignIn({ navigation }: SignInProps) {
   const [error, setError] = useState<string | null>(null);
 
   const FLASK_URL = 'http://localhost:5000'; // Update this to your Flask server URL
+  const isWeb = Platform.OS === 'web';
 
   useEffect(() => {
-    // Listen for deep link callbacks
-    const subscription = Linking.addEventListener('url', handleDeepLink);
+    // MOBILE: Listen for deep link callbacks
+    if (!isWeb) {
+      const subscription = Linking.addEventListener('url', handleDeepLink);
 
-    // Check if app was opened via deep link
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleDeepLink({ url });
-      }
-    });
+      // Check if app was opened via deep link
+      Linking.getInitialURL().then((url) => {
+        if (url) {
+          handleDeepLink({ url });
+        }
+      });
 
-    return () => {
-      subscription.remove();
-    };
-  }, []);
+      return () => {
+        subscription.remove();
+      };
+    }
+
+    // WEB: Listen for postMessage from auth window
+    if (isWeb) {
+      const handleMessage = (event: MessageEvent) => {
+        console.log('Message received:', event.data);
+
+        if (event.data.type === 'LEDOSSIER_AUTH_SUCCESS') {
+          const { email, success } = event.data.data;
+          if (success) {
+            console.log('Web authentication successful for:', email);
+            setLoading(false);
+            navigation.navigate('IdeaVault');
+          }
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+
+      // Also poll localStorage for auth data (backup method)
+      const pollInterval = setInterval(() => {
+        try {
+          const authDataStr = localStorage.getItem('ledossier_auth');
+          if (authDataStr) {
+            const authData = JSON.parse(authDataStr);
+            if (authData.success) {
+              console.log('Web authentication successful (localStorage):', authData.email);
+              localStorage.removeItem('ledossier_auth'); // Clean up
+              clearInterval(pollInterval);
+              setLoading(false);
+              navigation.navigate('IdeaVault');
+            }
+          }
+        } catch (e) {
+          console.error('Error checking localStorage:', e);
+        }
+      }, 1000); // Check every second
+
+      return () => {
+        window.removeEventListener('message', handleMessage);
+        clearInterval(pollInterval);
+      };
+    }
+  }, [isWeb, navigation]);
 
   const handleDeepLink = ({ url }: { url: string }) => {
     console.log('Deep link received:', url);
@@ -54,20 +99,38 @@ export default function SignIn({ navigation }: SignInProps) {
       setLoading(true);
       setError(null);
 
-      // Open the Flask login page in a browser
-      const result = await WebBrowser.openAuthSessionAsync(
-        `${FLASK_URL}/login`,
-        'ledossier://auth'
-      );
+      if (isWeb) {
+        // WEB: Open auth in new window and wait for postMessage/localStorage
+        const authWindow = window.open(
+          `${FLASK_URL}/login`,
+          'ledossier-auth',
+          'width=500,height=600'
+        );
 
-      setLoading(false);
+        if (!authWindow) {
+          setError('Popup blocked. Please allow popups for this site.');
+          setLoading(false);
+          return;
+        }
 
-      if (result.type === 'success') {
-        // Authentication successful - deep link handler will navigate
-        console.log('Auth success:', result);
-      } else if (result.type === 'cancel') {
-        console.log('User cancelled authentication');
-        setError('Authentication cancelled');
+        // The message listener in useEffect will handle the response
+        console.log('Opened authentication window for web');
+      } else {
+        // MOBILE: Open auth session with deep link
+        const result = await WebBrowser.openAuthSessionAsync(
+          `${FLASK_URL}/login`,
+          'ledossier://auth'
+        );
+
+        setLoading(false);
+
+        if (result.type === 'success') {
+          // Authentication successful - deep link handler will navigate
+          console.log('Auth success:', result);
+        } else if (result.type === 'cancel') {
+          console.log('User cancelled authentication');
+          setError('Authentication cancelled');
+        }
       }
     } catch (error) {
       console.error('Authentication error:', error);
@@ -173,6 +236,6 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#FFFDEE',
     fontSize: 14,
-    textDecoration: 'underline',
+    textDecorationLine: 'underline',
   },
 });
