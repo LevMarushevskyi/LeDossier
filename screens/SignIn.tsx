@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput,
 import { NavigationProp, RouteProp, useRoute } from '@react-navigation/native';
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import BackgroundNoise from '../components/BackgroundNoise';
 
 interface SignInProps {
@@ -90,6 +91,20 @@ export default function SignIn({ navigation }: SignInProps) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <BackgroundNoise baseColor="#0C001A" opacity={0.2} />
+
+      <View style={styles.centerStrip}>
+        <Svg width="100%" height="100%">
+          <Defs>
+            <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+              <Stop offset="0" stopColor="#0C001A" stopOpacity="0" />
+              <Stop offset="0.25" stopColor="#0C001A" stopOpacity="1" />
+              <Stop offset="0.75" stopColor="#0C001A" stopOpacity="1" />
+              <Stop offset="1" stopColor="#0C001A" stopOpacity="0" />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradientId})`} />
+        </Svg>
+      </View>
 
       <View style={styles.contentContainer}>
         <Image source={require('../assets/spyglass.png')} style={styles.spyglassImage} resizeMode="contain" />
@@ -194,6 +209,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0C001A',
   },
+  centerStrip: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: '10%',
+    right: '10%',
+  },
   contentContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -225,7 +247,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 253, 238, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(255, 253, 238, 0.3)',
-    borderRadius: 10,
+    borderRadius: 0,
     padding: 15,
     marginBottom: 15,
     color: '#FFFDEE',
@@ -260,7 +282,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontFamily: 'NotoSerif_400Regular',
-    color: '#ff6b6b',
+    color: '#FFFDEE',
     fontSize: 14,
     marginTop: 15,
     fontWeight: 'bold',
@@ -271,11 +293,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     marginTop: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 253, 238, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backButtonText: {
     fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 14,
-    textDecorationLine: 'underline',
   },
 });
