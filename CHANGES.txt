@@ -516,3 +516,27 @@ BUG FIXES & CHANGES
     - NotoSerif_400Regular: All other text (buttons, labels, body text)
   - Ensures consistent typography across entire application
 
+[2026-02-15 12:00] Enhanced background noise texture and dithering
+  - Increased Perlin noise size significantly
+    - Reduced baseFrequency from 0.05 to 0.0167 (tripled pattern size)
+    - Creates larger, more visible noise blocks
+  - Quadrupled Bayer dithering pixel resolution
+    - Increased pattern dimensions from 4x4 to 16x16 pixels
+    - Changed each dithering cell from 1x1 to 4x4 pixels
+    - Pattern now clearly visible with blocky retro aesthetic
+  - Researched open source Bayer dithering shader implementations
+    - Found implementations from hughsk/glsl-dither, Godot Shaders, and Shadertoy
+    - Attempted GLSL shader with react-native-skia RuntimeEffect
+    - Reverted to SVG approach due to shader compatibility issues
+  - Fixed shader persistence across page navigation
+    - Added unique IDs using useMemo to prevent conflicts
+    - Each BackgroundNoise instance generates unique filter and pattern IDs
+    - Fixed issue where background disappeared when navigating between screens
+  - Optimized opacity for dominant dark areas
+    - Adjusted noise layer opacity from 2x to 1.2x to 0.6x (final: 0.09)
+    - Adjusted dithering pattern opacity from 3x to 1.5x to 0.8x (final: 0.12)
+    - Dark purple (#0C001A) now dominates with subtle cream (#FFFDEE) texture
+  - Bayer matrix values based on Godot Shaders implementation
+    - 4x4 ordered dithering with normalized threshold values (0-15)/16
+    - Creates authentic retro dithered appearance
+
