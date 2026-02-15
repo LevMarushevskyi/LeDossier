@@ -3,7 +3,7 @@ import Matter from 'matter-js';
 export class PhysicsEngine {
   private engine: Matter.Engine;
   private world: Matter.World;
-  private bodies: Map<number, Matter.Body>;
+  private bodies: Map<string, Matter.Body>;
   private screenWidth: number;
   private screenHeight: number;
 
@@ -69,7 +69,7 @@ export class PhysicsEngine {
     Matter.World.add(this.world, walls);
   }
 
-  addCard(id: number, x: number, y: number, width: number, height: number): Matter.Body {
+  addCard(id: string, x: number, y: number, width: number, height: number): Matter.Body {
     const body = Matter.Bodies.rectangle(x, y, width, height, {
       restitution: 0.85, // Bounciness (0-1, higher = more bouncy)
       friction: 0.01,
@@ -83,7 +83,7 @@ export class PhysicsEngine {
     return body;
   }
 
-  removeCard(id: number): void {
+  removeCard(id: string): void {
     const body = this.bodies.get(id);
     if (body) {
       Matter.World.remove(this.world, body);
@@ -91,7 +91,7 @@ export class PhysicsEngine {
     }
   }
 
-  updateCardPosition(id: number, x: number, y: number): void {
+  updateCardPosition(id: string, x: number, y: number): void {
     const body = this.bodies.get(id);
     if (body) {
       // Wake the body to ensure physics continues
@@ -106,7 +106,7 @@ export class PhysicsEngine {
     }
   }
 
-  applyDragRelease(id: number, velocityX: number, velocityY: number): void {
+  applyDragRelease(id: string, velocityX: number, velocityY: number): void {
     const body = this.bodies.get(id);
     if (body) {
       // Wake the body before applying velocity
@@ -124,7 +124,7 @@ export class PhysicsEngine {
     Matter.Engine.update(this.engine, delta);
   }
 
-  getCardPosition(id: number): { x: number; y: number; rotation: number } | null {
+  getCardPosition(id: string): { x: number; y: number; rotation: number } | null {
     const body = this.bodies.get(id);
     if (body) {
       return {
@@ -136,8 +136,8 @@ export class PhysicsEngine {
     return null;
   }
 
-  getAllCardPositions(): Map<number, { x: number; y: number; rotation: number }> {
-    const positions = new Map<number, { x: number; y: number; rotation: number }>();
+  getAllCardPositions(): Map<string, { x: number; y: number; rotation: number }> {
+    const positions = new Map<string, { x: number; y: number; rotation: number }>();
     this.bodies.forEach((body, id) => {
       positions.set(id, {
         x: body.position.x,

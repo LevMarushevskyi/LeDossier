@@ -232,7 +232,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#0C001A',
   },
-  loadingText: {
+  switchButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 10,
+  },
+  switchButtonText: {
     fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 14,

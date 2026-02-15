@@ -81,13 +81,13 @@ async function callGemini(prompt: string): Promise<any> {
 // --- Pipeline Functions ---
 
 async function analyzeIdea(
-  name: string,
-  description: string
+  title: string,
+  rawInput: string
 ): Promise<any> {
   const prompt = `You are a business idea analyst. Analyze the following idea and return ONLY valid JSON (no markdown fencing, no explanation).
 
-Idea Name: ${name}
-Idea Description: ${description}
+Idea Title: ${title}
+Idea Description: ${rawInput}
 
 Return this exact JSON structure:
 {
@@ -268,10 +268,10 @@ export async function handler(event: any) {
   try {
     // 1. Parse input
     const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-    const { name, description } = body || {};
+    const { title, rawInput } = body || {};
 
-    if (!name || !description) {
-      return error("Both 'name' and 'description' are required", 400);
+    if (!title || !rawInput) {
+      return error("Both 'title' and 'rawInput' are required", 400);
     }
 
     // 2. Authenticate
@@ -288,8 +288,8 @@ export async function handler(event: any) {
         Item: {
           userId: user.userId,
           ideaId,
-          title: name,
-          rawInput: description,
+          title,
+          rawInput,
           status: "stasis",
           createdAt: now,
           lastViewedAt: now,
@@ -303,7 +303,7 @@ export async function handler(event: any) {
     );
 
     // 5. Idea Analysis (Bedrock)
-    const ideaAnalysis = await analyzeIdea(name, description);
+    const ideaAnalysis = await analyzeIdea(title, rawInput);
     await storeToS3(
       `ideas/${ideaId}/analysis.json`,
       JSON.stringify(ideaAnalysis, null, 2),
@@ -361,7 +361,7 @@ export async function handler(event: any) {
           ideaId,
           timestamp: now,
           type: "creation",
-          summary: `Idea "${name}" created and analyzed`,
+          summary: `Idea "${title}" created and analyzed`,
         },
       })
     );
@@ -369,8 +369,8 @@ export async function handler(event: any) {
     // 10. Return full dossier
     return success({
       ideaId,
-      title: name,
-      rawInput: description,
+      title,
+      rawInput,
       status: "active",
       createdAt: now,
       analysis: ideaAnalysis,

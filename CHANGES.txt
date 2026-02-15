@@ -540,3 +540,54 @@ BUG FIXES & CHANGES
     - 4x4 ordered dithering with normalized threshold values (0-15)/16
     - Creates authentic retro dithered appearance
 
+[2026-02-15 13:00] Migrated from Idea interface to Dossier interface
+  - Removed Idea interface completely, now using only Dossier throughout app
+  - Updated property names to match backend API:
+    - name → title
+    - description → rawInput
+    - id → ideaId
+    - x and y remain the same for physics positioning
+  - Changed all ID types from number to string (ideaId is string in backend)
+  - Updated PhysicsEngine.ts to use string IDs instead of number IDs
+  - Updated DraggableIdeaCard.tsx to accept Dossier interface
+  - Updated handleConfirm to send correct API payload with title and rawInput
+  - Fixed rendering logic to properly display dossier content vs physics cards
+  - Added navButton and navButtonText styles for "All Ideas" navigation
+  - Completely removed remaining Notification references from App.tsx
+    - Removed Notification import
+    - Removed Notification Stack.Screen from navigation
+    - Notification.tsx file already deleted in previous session
+
+[2026-02-15 14:00] Fixed AWS Amplify UUID module resolution error
+  - Added required polyfills for uuid package in React Native/Expo environment
+  - Installed react-native-get-random-values and react-native-url-polyfill
+  - Added polyfill imports at top of index.ts (must load before any other code)
+  - Resolves "./nil.js" module resolution error from @aws-amplify/core
+  - UUID package requires native crypto polyfills to work in React Native
+  - Both polyfills must be imported as first imports in entry file for proper initialization
+
+[2026-02-15 14:30] Fixed frontend-backend API parameter mismatch
+  - Updated Lambda handler to accept 'title' and 'rawInput' instead of 'name' and 'description'
+  - Frontend was sending { title, rawInput } but backend expected { name, description }
+  - This mismatch would have caused all IDEATE requests to fail with 400 error
+  - Updated analyzeIdea function parameters to use title and rawInput
+  - Updated all references throughout Lambda handler (lines 271, 273, 306, 364, 372-373)
+  - Frontend and backend now fully aligned on Dossier interface property names
+
+[2026-02-15 15:00] Fixed all text components to use specified fonts
+  - Added fontFamily: 'NotoSerif_400Regular' to 19 text styles in IdeaVault.tsx that were missing font specifications
+  - Updated styles: loadingText, loadingSubtext, errorTitle, errorText, retryButtonText
+  - Updated styles: dossierTitle, dossierDomain, tagText
+  - Updated styles: confidenceLabel, confidenceScore
+  - Updated styles: sectionHeader, sectionBody, bulletItem
+  - Updated styles: sourceTitle, sourceCategory, sourceSummary
+  - Updated styles: ideaCardTitle, ideaCardDomain, ideaCardScore
+  - All text in the app now consistently uses either PetitFormalScript (titles) or NotoSerif (body text)
+  - Ensures consistent typography across all screens and prevents fallback to system fonts
+
+[2026-02-15 15:15] Fixed "There is already a signed in user" authentication error
+  - Updated login() and register() functions in AuthContext to sign out existing session first
+  - AWS Amplify throws error when trying to sign in/register while session exists
+  - Added try/catch wrapped signOut() before signIn() and signUp() calls
+  - Silently ignores errors if no user is currently signed in
+  - Resolves issue where users couldn't sign in or register due to persisted sessions

@@ -62,18 +62,18 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
-  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [ideas, setIdeas] = useState<Dossier[]>([]);
   const [activeDossier, setActiveDossier] = useState<Dossier | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
+  const [selectedIdea, setSelectedIdea] = useState<Dossier | null>(null);
   const [showIdeaDetail, setShowIdeaDetail] = useState(false);
 
   // Physics engine state
   const physicsEngineRef = useRef<PhysicsEngine | null>(null);
   const [containerLayout, setContainerLayout] = useState({ width: 0, height: 0 });
-  const cardPositions = useRef(new Map<number, {
+  const cardPositions = useRef(new Map<string, {
     x: Animated.SharedValue<number>;
     y: Animated.SharedValue<number>;
     rotation: Animated.SharedValue<number>;
@@ -107,17 +107,6 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
       return;
     }
 
-    const spawnPos = getSpawnPosition();
-    const newIdea: Idea = {
-      name,
-      description,
-      id: Date.now(),
-      x: spawnPos.x,
-      y: spawnPos.y,
-    };
-
-    setIdeas([...ideas, newIdea]);
-    console.log('Created idea with physics:', newIdea);
     setShowPanel(false);
     setLoading(true);
     setErrorMsg(null);
@@ -139,7 +128,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: name.trim(), description: description.trim() }),
+        body: JSON.stringify({ title: name.trim(), rawInput: description.trim() }),
       });
 
       const data = await response.json();
@@ -148,8 +137,17 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
         throw new Error(data.error || 'Failed to analyze idea');
       }
 
-      setDossiers(prev => [data, ...prev]);
-      setActiveDossier(data);
+      // Add spawn position to the dossier data
+      const spawnPos = getSpawnPosition();
+      const dossierWithPosition = {
+        ...data,
+        x: spawnPos.x,
+        y: spawnPos.y,
+      };
+
+      setDossiers(prev => [dossierWithPosition, ...prev]);
+      setIdeas(prev => [dossierWithPosition, ...prev]);
+      setActiveDossier(dossierWithPosition);
       setName('');
       setDescription('');
     } catch (err: any) {
@@ -287,7 +285,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
     return <Text style={styles.boxText}>Your ideas will appear here</Text>;
   };
 
-  const handleIdeaClick = (idea: Idea) => {
+  const handleIdeaClick = (idea: Dossier) => {
     setSelectedIdea(idea);
     setShowIdeaDetail(true);
   };
@@ -313,9 +311,9 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
     let needsUpdate = false;
 
     ideas.forEach((idea) => {
-      if (!cardPositions.has(idea.id)) {
+      if (!cardPositions.has(idea.ideaId)) {
         // Create shared values for this card using makeMutable (can be called anywhere)
-        cardPositions.set(idea.id, {
+        cardPositions.set(idea.ideaId, {
           x: makeMutable(idea.x),
           y: makeMutable(idea.y),
           rotation: makeMutable(0),
@@ -323,7 +321,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
 
         // Add to physics engine
         physicsEngineRef.current.addCard(
-          idea.id,
+          idea.ideaId,
           idea.x,
           idea.y,
           160, // CARD_WIDTH
@@ -336,7 +334,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
 
     // Remove cards that were deleted
     cardPositions.forEach((_, id) => {
-      if (!ideas.find(idea => idea.id === id)) {
+      if (!ideas.find(idea => idea.ideaId === id)) {
         physicsEngineRef.current?.removeCard(id);
         cardPositions.delete(id);
         needsUpdate = true;
@@ -386,20 +384,20 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   }, [ideas, cardPositions]);
 
   // Gesture handlers
-  const handleCardTap = (idea: Idea) => {
+  const handleCardTap = (idea: Dossier) => {
     setSelectedIdea(idea);
     setShowIdeaDetail(true);
   };
 
-  const handleDragStart = (id: number) => {
+  const handleDragStart = (id: string) => {
     // Card being dragged
   };
 
-  const handleDragMove = (id: number, x: number, y: number) => {
+  const handleDragMove = (id: string, x: number, y: number) => {
     physicsEngineRef.current?.updateCardPosition(id, x, y);
   };
 
-  const handleDragEnd = (id: number, velocityX: number, velocityY: number) => {
+  const handleDragEnd = (id: string, velocityX: number, velocityY: number) => {
     physicsEngineRef.current?.applyDragRelease(id, velocityX, velocityY);
   };
 
@@ -421,24 +419,24 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
         <Text style={styles.pageTitle}>Idea Vault</Text>
         <View
           style={styles.contentBox}
-          
           onLayout={(event) => {
-            const { width, height } = event.nativeEvent.layout;
+            const { width, height} = event.nativeEvent.layout;
             setContainerLayout({ width, height });
           }}
         >
-          {{renderDossierContent()}
-          {ideas.length === 0 ? (
+          {loading || errorMsg || activeDossier || dossiers.length > 0 ? (
+            renderDossierContent()
+          ) : ideas.length === 0 ? (
             <Text style={styles.boxText}>Your ideas will appear here</Text>
           ) : (
             <View style={styles.physicsContainer}>
               {ideas.map((idea) => {
-                const positions = cardPositions.get(idea.id);
+                const positions = cardPositions.get(idea.ideaId);
                 if (!positions) return null;
 
                 return (
                   <DraggableIdeaCard
-                    key={idea.id}
+                    key={idea.ideaId}
                     idea={idea}
                     initialX={idea.x}
                     initialY={idea.y}
@@ -456,7 +454,6 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
               })}
             </View>
           )}
-          
         </View>
       </View>
 
@@ -529,9 +526,9 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
           <View style={styles.ideaDetailPanel}>
             {selectedIdea && (
               <>
-                <Text style={styles.ideaDetailTitle}>{selectedIdea.name}</Text>
+                <Text style={styles.ideaDetailTitle}>{selectedIdea.title}</Text>
                 <ScrollView style={styles.ideaDetailScroll}>
-                  <Text style={styles.ideaDetailDescription}>{selectedIdea.description}</Text>
+                  <Text style={styles.ideaDetailDescription}>{selectedIdea.rawInput}</Text>
                 </ScrollView>
                 <TouchableOpacity
                   style={styles.closeButton}
@@ -553,6 +550,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0C001A',
+  },
+  navButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    backgroundColor: '#FFFDEE',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    zIndex: 100,
+  },
+  navButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
+    color: '#0C001A',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   signOutButton: {
     position: 'absolute',
@@ -756,12 +769,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 16,
     fontWeight: 'bold',
     marginTop: 15,
   },
   loadingSubtext: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 12,
     marginTop: 5,
@@ -774,12 +789,14 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorTitle: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#cc0000',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
   },
   errorText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 14,
     textAlign: 'center',
@@ -792,6 +809,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   retryButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontWeight: 'bold',
   },
@@ -800,12 +818,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   dossierTitle: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 22,
     fontWeight: 'bold',
     color: '#0C001A',
     marginBottom: 4,
   },
   dossierDomain: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 14,
     color: '#0C001A',
     opacity: 0.6,
@@ -824,6 +844,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   tagText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 11,
   },
@@ -839,15 +860,18 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   confidenceLabel: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 12,
   },
   confidenceScore: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 18,
     fontWeight: 'bold',
   },
   sectionHeader: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 16,
     fontWeight: 'bold',
     color: '#0C001A',
@@ -855,11 +879,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sectionBody: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 13,
     color: '#0C001A',
     lineHeight: 20,
   },
   bulletItem: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 13,
     color: '#0C001A',
     lineHeight: 20,
@@ -873,17 +899,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sourceTitle: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 13,
     fontWeight: 'bold',
     color: '#0C001A',
   },
   sourceCategory: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 11,
     color: '#0C001A',
     opacity: 0.5,
     marginBottom: 4,
   },
   sourceSummary: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 12,
     color: '#0C001A',
     lineHeight: 18,
@@ -895,17 +924,20 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   ideaCardTitle: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 16,
     fontWeight: 'bold',
     color: '#0C001A',
   },
   ideaCardDomain: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 12,
     color: '#0C001A',
     opacity: 0.6,
     marginTop: 2,
   },
   ideaCardScore: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 12,
     color: '#0C001A',
     marginTop: 4,

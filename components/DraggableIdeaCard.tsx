@@ -7,22 +7,27 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 
-interface Idea {
-  name: string;
-  description: string;
-  id: number;
+interface Dossier {
+  ideaId: string;
+  title: string;
+  rawInput: string;
+  status: string;
+  createdAt: string;
+  analysis: any;
+  research: any;
+  swot: any;
   x: number;
   y: number;
 }
 
 interface DraggableIdeaCardProps {
-  idea: Idea;
+  idea: Dossier;
   initialX: number;
   initialY: number;
-  onTap: (idea: Idea) => void;
-  onDragStart: (id: number) => void;
-  onDragMove: (id: number, x: number, y: number) => void;
-  onDragEnd: (id: number, velocityX: number, velocityY: number) => void;
+  onTap: (idea: Dossier) => void;
+  onDragStart: (id: string) => void;
+  onDragMove: (id: string, x: number, y: number) => void;
+  onDragEnd: (id: string, velocityX: number, velocityY: number) => void;
   physicsX: Animated.SharedValue<number>;
   physicsY: Animated.SharedValue<number>;
   physicsRotation: Animated.SharedValue<number>;
@@ -56,7 +61,7 @@ function DraggableIdeaCard({
       isDragging.value = true;
       startX.value = physicsX.value;
       startY.value = physicsY.value;
-      runOnJS(onDragStart)(idea.id);
+      runOnJS(onDragStart)(idea.ideaId);
     })
     .onUpdate((event) => {
       const newX = startX.value + event.translationX;
@@ -73,11 +78,11 @@ function DraggableIdeaCard({
 
       physicsX.value = clampedX;
       physicsY.value = clampedY;
-      runOnJS(onDragMove)(idea.id, clampedX, clampedY);
+      runOnJS(onDragMove)(idea.ideaId, clampedX, clampedY);
     })
     .onEnd((event) => {
       isDragging.value = false;
-      runOnJS(onDragEnd)(idea.id, event.velocityX / 1000, event.velocityY / 1000);
+      runOnJS(onDragEnd)(idea.ideaId, event.velocityX / 1000, event.velocityY / 1000);
     });
 
   const tapGesture = Gesture.Tap()
@@ -104,7 +109,7 @@ function DraggableIdeaCard({
     <GestureDetector gesture={composedGesture}>
       <Animated.View style={[styles.card, animatedStyle]}>
         <Text style={styles.cardTitle} numberOfLines={4}>
-          {idea.name}
+          {idea.title}
         </Text>
       </Animated.View>
     </GestureDetector>
@@ -143,5 +148,5 @@ const styles = StyleSheet.create({
 });
 
 export default React.memo(DraggableIdeaCard, (prev, next) => {
-  return prev.idea.id === next.idea.id;
+  return prev.idea.ideaId === next.idea.ideaId;
 });

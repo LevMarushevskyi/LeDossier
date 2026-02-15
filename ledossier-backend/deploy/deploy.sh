@@ -52,4 +52,4 @@ aws cloudformation describe-stacks \
 
 echo ""
 echo "Done! Use the ApiUrl above to test with:"
-echo "curl -X POST <ApiUrl>ideas -H 'Content-Type: application/json' -d '{\"name\":\"Test Idea\",\"description\":\"A test idea\"}'"
+echo "curl -X POST <ApiUrl>ideas -H 'Content-Type: application/json' -d '{\"title\":\"Test Idea\",\"rawInput\":\"A test idea\"}'"
