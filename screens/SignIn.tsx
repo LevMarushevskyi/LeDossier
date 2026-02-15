@@ -3,6 +3,7 @@ import { NavigationProp } from '@react-navigation/native';
 import { useState, useEffect } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import BackgroundNoise from '../components/BackgroundNoise';
 
 interface SignInProps {
   navigation: NavigationProp<any>;
@@ -141,6 +142,8 @@ export default function SignIn({ navigation }: SignInProps) {
 
   return (
     <View style={styles.container}>
+      <BackgroundNoise baseColor="#0C001A" opacity={0.2} />
+
       <View style={styles.contentContainer}>
         <Text style={styles.title}>Welcome to Le Dossier</Text>
         <Text style={styles.subtitle}>Sign in to access your ideas</Text>
@@ -217,12 +220,14 @@ const styles = StyleSheet.create({
     color: '#0C001A',
   },
   loadingText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 14,
     marginTop: 10,
     fontStyle: 'italic',
   },
   errorText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#ff6b6b',
     fontSize: 14,
     marginTop: 10,
@@ -234,6 +239,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   backButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 14,
     textDecorationLine: 'underline',
