@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::129751814064:role/cdk-hnb659fds-deploy-role-129751814064-us-east-1",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::129751814064:role/cdk-hnb659fds-cfn-exec-role-129751814064-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-129751814064-us-east-1/9c12c0fba865ad803a632a484d6a52428a6307a8cb44935a7dc3f9c25ce81cd4.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-129751814064-us-east-1/1112b58955037e32d9a0066e9bb014b25744cb4043c2963c03aff567f5d30476.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -137,7 +137,7 @@
         "/LeDossierStack/LeDossierApi/Deployment/Resource": [
           {
             "type": "aws:cdk:logicalId",
-            "data": "LeDossierApiDeploymentE5E79E83bda719e8c5948d353e86e13eae7668bc"
+            "data": "LeDossierApiDeploymentE5E79E83d91a83d8b07f0bb991771886f49a9757"
           }
         ],
         "/LeDossierStack/LeDossierApi/DeploymentStage.prod/Resource": [
@@ -186,6 +186,12 @@
           {
             "type": "aws:cdk:logicalId",
             "data": "LeDossierApiideasPOSTF5D98910"
+          }
+        ],
+        "/LeDossierStack/CognitoAuthorizer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CognitoAuthorizerF3215DBC"
           }
         ],
         "/LeDossierStack/ApiUrl": [
