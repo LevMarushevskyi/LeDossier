@@ -1,6 +1,7 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { NavigationProp } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
 
 const API_URL = 'https://dhqrasy77i.execute-api.us-east-1.amazonaws.com/prod';
 
@@ -47,6 +48,7 @@ interface IdeaVaultProps {
 }
 
 export default function IdeaVault({ navigation }: IdeaVaultProps) {
+  const { logout, getAuthToken } = useAuth();
   const [showPanel, setShowPanel] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -77,9 +79,14 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
     }, 20000);
 
     try {
+      const token = await getAuthToken();
+
       const response = await fetch(`${API_URL}/ideas`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ name: name.trim(), description: description.trim() }),
       });
 
@@ -120,27 +127,8 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   };
 
   const handleSignOut = async () => {
-    try {
-      const FLASK_URL = 'http://localhost:5000';
-
-      // Call Flask logout endpoint to clear server session
-      await fetch(`${FLASK_URL}/logout`, {
-        method: 'GET',
-        credentials: 'include', // Include cookies for session management
-      });
-
-      // Clear client-side auth data for web platform
-      if (Platform.OS === 'web') {
-        localStorage.removeItem('ledossier_auth');
-      }
-
-      // Navigate back to home
-      navigation.navigate('Home');
-    } catch (error) {
-      console.error('Sign out error:', error);
-      // Navigate to home anyway even if logout call fails
-      navigation.navigate('Home');
-    }
+    await logout();
+    navigation.navigate('Home');
   };
 
   const renderDossierContent = () => {

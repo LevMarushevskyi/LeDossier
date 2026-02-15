@@ -275,7 +275,7 @@ export async function handler(event: any) {
     }
 
     // 2. Authenticate
-    const user = getUserFromEvent(event);
+    const user = await getUserFromEvent(event);
 
     // 3. Generate IDs
     const ideaId = randomUUID();
