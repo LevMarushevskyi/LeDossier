@@ -11,7 +11,7 @@
     },
     "LeDossierStack": {
       "type": "aws:cloudformation:stack",
-      "environment": "aws://129751814064/us-east-1",
+      "environment": "aws://unknown-account/us-east-1",
       "properties": {
         "templateFile": "LeDossierStack.template.json",
         "terminationProtection": false,
@@ -25,7 +25,7 @@
           "LeDossierStack.assets"
         ],
         "lookupRole": {
-          "arn": "arn:${AWS::Partition}:iam::129751814064:role/cdk-hnb659fds-lookup-role-129751814064-us-east-1",
+          "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-us-east-1",
           "requiresBootstrapStackVersion": 8,
           "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
         }

@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput,
 import { NavigationProp } from '@react-navigation/native';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import BackgroundNoise from '../components/BackgroundNoise';
 
 interface SignInProps {
   navigation: NavigationProp<any>;
@@ -83,6 +84,8 @@ export default function SignIn({ navigation }: SignInProps) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <BackgroundNoise baseColor="#0C001A" opacity={0.2} />
+
       <View style={styles.contentContainer}>
         <Text style={styles.title}>Le Dossier</Text>
         <Text style={styles.subtitle}>
@@ -235,14 +238,18 @@ const styles = StyleSheet.create({
     color: '#0C001A',
   },
   switchButton: {
-    paddingVertical: 15,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 10,
   },
   switchButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 14,
     textDecorationLine: 'underline',
   },
   errorText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#ff6b6b',
     fontSize: 14,
     marginTop: 15,
@@ -256,6 +263,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   backButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 14,
     textDecorationLine: 'underline',

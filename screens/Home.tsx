@@ -1,5 +1,6 @@
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { NavigationProp } from '@react-navigation/native';
+import BackgroundNoise from '../components/BackgroundNoise';
 
 interface HomeProps {
   navigation: NavigationProp<any>;
@@ -8,6 +9,8 @@ interface HomeProps {
 export default function Home({ navigation }: HomeProps) {
   return (
     <View style={styles.container}>
+      <BackgroundNoise baseColor="#0C001A" opacity={0.2} />
+
       <View style={styles.titleContainer}>
         <Text style={styles.title}>Le Dossier</Text>
       </View>

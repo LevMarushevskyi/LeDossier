@@ -1,6 +1,11 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, ActivityIndicator } from 'react-native';
-import { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator, Dimensions, ScrollView } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
 import { NavigationProp } from '@react-navigation/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, SharedValue, makeMutable } from 'react-native-reanimated';
+import { PhysicsEngine } from '../utils/PhysicsEngine';
+import DraggableIdeaCard from '../components/DraggableIdeaCard';
+import BackgroundNoise from '../components/BackgroundNoise';
 import { useAuth } from '../contexts/AuthContext';
 
 const API_URL = 'https://dhqrasy77i.execute-api.us-east-1.amazonaws.com/prod';
@@ -41,6 +46,8 @@ interface Dossier {
     confidenceRationale: string;
     recommendedNextStep: string;
   };
+  x: number;
+  y: number;
 }
 
 interface IdeaVaultProps {
@@ -52,16 +59,50 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const [showPanel, setShowPanel] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState('');
+  const [rawInput, setRawInput] = useState('');
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
+  const [ideas, setIdeas] = useState<Dossier[]>([]);
   const [activeDossier, setActiveDossier] = useState<Dossier | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedIdea, setSelectedIdea] = useState<Dossier | null>(null);
+  const [showIdeaDetail, setShowIdeaDetail] = useState(false);
+
+  // Physics engine state
+  const physicsEngineRef = useRef<PhysicsEngine | null>(null);
+  const [containerLayout, setContainerLayout] = useState({ width: 0, height: 0 });
+  const cardPositions = useRef(new Map<string, {
+    x: Animated.SharedValue<number>;
+    y: Animated.SharedValue<number>;
+    rotation: Animated.SharedValue<number>;
+  }>()).current;
+  const [, forceUpdate] = useState({});
+
+  const MAX_CARDS = 20;
+
+  // Calculate spawn position for new cards (cascade from top-center)
+  const getSpawnPosition = () => {
+    const baseX = containerLayout.width / 2;
+    const baseY = 100;
+    const offsetX = (Math.random() - 0.5) * 100; // Random spread
+    const offsetY = ideas.length * 20; // Cascade down
+
+    // Clamp to container bounds
+    const x = Math.max(80, Math.min(containerLayout.width - 80, baseX + offsetX));
+    const y = Math.max(60, Math.min(containerLayout.height - 60, baseY + offsetY));
+
+    return { x, y };
+  };
 
   const handleConfirm = async () => {
-    if (!name.trim() || !description.trim()) {
+    if (!title.trim() || !rawInput.trim()) {
+      setShowAlert(true);
+      return;
+    }
+
+    if (ideas.length >= MAX_CARDS) {
       setShowAlert(true);
       return;
     }
@@ -87,7 +128,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: name.trim(), description: description.trim() }),
+        body: JSON.stringify({ title: title.trim(), rawInput: rawInput.trim() }),
       });
 
       const data = await response.json();
@@ -96,10 +137,19 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
         throw new Error(data.error || 'Failed to analyze idea');
       }
 
-      setDossiers(prev => [data, ...prev]);
-      setActiveDossier(data);
-      setName('');
-      setDescription('');
+      // Add spawn position to the dossier data
+      const spawnPos = getSpawnPosition();
+      const dossierWithPosition = {
+        ...data,
+        x: spawnPos.x,
+        y: spawnPos.y,
+      };
+
+      setDossiers(prev => [dossierWithPosition, ...prev]);
+      setIdeas(prev => [dossierWithPosition, ...prev]);
+      setActiveDossier(dossierWithPosition);
+      setTitle('');
+      setRawInput('');
     } catch (err: any) {
       console.error('Pipeline error:', err);
       setErrorMsg(err.message || 'Something went wrong');
@@ -118,8 +168,8 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const handleDeleteConfirm = () => {
     setShowDeleteConfirm(false);
     setShowPanel(false);
-    setName('');
-    setDescription('');
+    setTitle('');
+    setRawInput('');
   };
 
   const handleDeleteCancel = () => {
@@ -235,26 +285,175 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
     return <Text style={styles.boxText}>Your ideas will appear here</Text>;
   };
 
+  const handleIdeaClick = (idea: Dossier) => {
+    setSelectedIdea(idea);
+    setShowIdeaDetail(true);
+  };
+
+  // Initialize physics engine when container layout is known
+  useEffect(() => {
+    if (containerLayout.width > 0 && containerLayout.height > 0) {
+      physicsEngineRef.current = new PhysicsEngine(
+        containerLayout.width,
+        containerLayout.height
+      );
+    }
+
+    return () => {
+      physicsEngineRef.current?.destroy();
+    };
+  }, [containerLayout.width, containerLayout.height]);
+
+  // Create shared values for new ideas and sync with physics
+  useEffect(() => {
+    if (!physicsEngineRef.current) return;
+
+    let needsUpdate = false;
+
+    ideas.forEach((idea) => {
+      if (!cardPositions.has(idea.ideaId)) {
+        // Create shared values for this card using makeMutable (can be called anywhere)
+        cardPositions.set(idea.ideaId, {
+          x: makeMutable(idea.x),
+          y: makeMutable(idea.y),
+          rotation: makeMutable(0),
+        });
+
+        // Add to physics engine
+        physicsEngineRef.current.addCard(
+          idea.ideaId,
+          idea.x,
+          idea.y,
+          160, // CARD_WIDTH
+          120  // CARD_HEIGHT
+        );
+
+        needsUpdate = true;
+      }
+    });
+
+    // Remove cards that were deleted
+    cardPositions.forEach((_, id) => {
+      if (!ideas.find(idea => idea.ideaId === id)) {
+        physicsEngineRef.current?.removeCard(id);
+        cardPositions.delete(id);
+        needsUpdate = true;
+      }
+    });
+
+    // Force re-render if positions changed
+    if (needsUpdate) {
+      forceUpdate({});
+    }
+  }, [ideas, cardPositions]);
+
+  // Physics update loop
+  useEffect(() => {
+    if (!physicsEngineRef.current || ideas.length === 0) return;
+
+    let lastTime = Date.now();
+    let animationFrame: number;
+
+    const updatePhysics = () => {
+      const now = Date.now();
+      const delta = now - lastTime;
+      lastTime = now;
+
+      // Step physics simulation
+      physicsEngineRef.current?.step(delta);
+
+      // Update shared values from physics
+      const positions = physicsEngineRef.current?.getAllCardPositions();
+      positions?.forEach((pos, id) => {
+        const cardPos = cardPositions.get(id);
+        if (cardPos) {
+          cardPos.x.value = pos.x;
+          cardPos.y.value = pos.y;
+          cardPos.rotation.value = pos.rotation;
+        }
+      });
+
+      animationFrame = requestAnimationFrame(updatePhysics);
+    };
+
+    animationFrame = requestAnimationFrame(updatePhysics);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [ideas, cardPositions]);
+
+  // Gesture handlers
+  const handleCardTap = (idea: Dossier) => {
+    setSelectedIdea(idea);
+    setShowIdeaDetail(true);
+  };
+
+  const handleDragStart = (id: string) => {
+    // Card being dragged
+  };
+
+  const handleDragMove = (id: string, x: number, y: number) => {
+    physicsEngineRef.current?.updateCardPosition(id, x, y);
+  };
+
+  const handleDragEnd = (id: string, velocityX: number, velocityY: number) => {
+    physicsEngineRef.current?.applyDragRelease(id, velocityX, velocityY);
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Notification')}>
-          <Text style={styles.navButtonText}>Notifications</Text>
-        </TouchableOpacity>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={styles.container}>
+      <BackgroundNoise baseColor="#0C001A" opacity={0.2} />
+
         {activeDossier && (
           <TouchableOpacity style={styles.navButton} onPress={() => setActiveDossier(null)}>
             <Text style={styles.navButtonText}>All Ideas</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutButtonText}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+        <Text style={styles.signOutButtonText}>Sign Out</Text>
+      </TouchableOpacity>
 
       <View style={styles.mainContent}>
         <Text style={styles.pageTitle}>Idea Vault</Text>
-        <View style={styles.contentBox}>
-          {renderDossierContent()}
+        <View
+          style={styles.contentBox}
+          onLayout={(event) => {
+            const { width, height} = event.nativeEvent.layout;
+            setContainerLayout({ width, height });
+          }}
+        >
+          {loading || errorMsg || activeDossier || dossiers.length > 0 ? (
+            renderDossierContent()
+          ) : ideas.length === 0 ? (
+            <Text style={styles.boxText}>Your ideas will appear here</Text>
+          ) : (
+            <View style={styles.physicsContainer}>
+              {ideas.map((idea) => {
+                const positions = cardPositions.get(idea.ideaId);
+                if (!positions) return null;
+
+                return (
+                  <DraggableIdeaCard
+                    key={idea.ideaId}
+                    idea={idea}
+                    initialX={idea.x}
+                    initialY={idea.y}
+                    onTap={handleCardTap}
+                    onDragStart={handleDragStart}
+                    onDragMove={handleDragMove}
+                    onDragEnd={handleDragEnd}
+                    physicsX={positions.x}
+                    physicsY={positions.y}
+                    physicsRotation={positions.rotation}
+                    containerWidth={containerLayout.width}
+                    containerHeight={containerLayout.height}
+                  />
+                );
+              })}
+            </View>
+          )}
         </View>
       </View>
 
@@ -274,14 +473,14 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
             <TextInput
               style={styles.input}
               placeholder="Name"
-              value={name}
-              onChangeText={setName}
+              value={title}
+              onChangeText={setTitle}
             />
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Description"
-              value={description}
-              onChangeText={setDescription}
+              value={rawInput}
+              onChangeText={setRawInput}
               multiline
             />
             <View style={styles.buttonRow}>
@@ -313,7 +512,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
             <Text style={styles.alertMessage}>This will discard your current idea.</Text>
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.confirmButton} onPress={handleDeleteConfirm}>
-                <Text style={styles.confirmButtonText}>Yes, Delete</Text>
+                <Text style={styles.confirmButtonText}>Continue</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteCancel}>
                 <Text style={styles.deleteButtonText}>Cancel</Text>
@@ -322,7 +521,28 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
           </View>
         </View>
       </Modal>
-    </View>
+      <Modal visible={showIdeaDetail} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.ideaDetailPanel}>
+            {selectedIdea && (
+              <>
+                <Text style={styles.ideaDetailTitle}>{selectedIdea.title}</Text>
+                <ScrollView style={styles.ideaDetailScroll}>
+                  <Text style={styles.ideaDetailDescription}>{selectedIdea.rawInput}</Text>
+                </ScrollView>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setShowIdeaDetail(false)}
+                >
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -331,30 +551,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0C001A',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 20,
-    paddingTop: 40,
-  },
   navButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
     backgroundColor: '#FFFDEE',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
+    zIndex: 100,
   },
   navButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 14,
     fontWeight: 'bold',
   },
   signOutButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
     backgroundColor: '#FFFDEE',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
+    zIndex: 100,
   },
   signOutButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 14,
     fontWeight: 'bold',
@@ -379,8 +603,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    overflow: 'hidden',
+  },
+  physicsContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    position: 'relative',
   },
   boxText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 18,
   },
@@ -397,6 +629,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   actionButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 18,
     fontWeight: 'bold',
@@ -408,22 +641,26 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   backButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 14,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(12, 0, 26, 0.5)',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
+    paddingTop: 40,
   },
   panel: {
-    width: '80%',
+    width: '90%',
     backgroundColor: '#FFFDEE',
     borderRadius: 10,
-    padding: 20,
+    padding: 30,
+    maxHeight: '70%',
   },
   panelTitle: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 24,
     fontWeight: 'bold',
     color: '#0C001A',
@@ -444,7 +681,8 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
+    gap: 20,
   },
   addButton: {
     backgroundColor: '#FFFDEE',
@@ -475,6 +713,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   confirmButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontWeight: 'bold',
   },
@@ -485,6 +724,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   deleteButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontWeight: 'bold',
   },
@@ -496,12 +736,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   alertTitle: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 20,
     fontWeight: 'bold',
     color: '#0C001A',
     marginBottom: 10,
   },
   alertMessage: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 16,
     color: '#0C001A',
     marginBottom: 20,
@@ -514,6 +756,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   alertButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontWeight: 'bold',
   },
@@ -526,12 +769,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 16,
     fontWeight: 'bold',
     marginTop: 15,
   },
   loadingSubtext: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 12,
     marginTop: 5,
@@ -544,12 +789,14 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorTitle: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#cc0000',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
   },
   errorText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#0C001A',
     fontSize: 14,
     textAlign: 'center',
@@ -562,6 +809,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   retryButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontWeight: 'bold',
   },
@@ -570,12 +818,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   dossierTitle: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 22,
     fontWeight: 'bold',
     color: '#0C001A',
     marginBottom: 4,
   },
   dossierDomain: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 14,
     color: '#0C001A',
     opacity: 0.6,
@@ -594,6 +844,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   tagText: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 11,
   },
@@ -609,15 +860,18 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   confidenceLabel: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 12,
   },
   confidenceScore: {
+    fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 18,
     fontWeight: 'bold',
   },
   sectionHeader: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 16,
     fontWeight: 'bold',
     color: '#0C001A',
@@ -625,11 +879,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sectionBody: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 13,
     color: '#0C001A',
     lineHeight: 20,
   },
   bulletItem: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 13,
     color: '#0C001A',
     lineHeight: 20,
@@ -643,17 +899,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sourceTitle: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 13,
     fontWeight: 'bold',
     color: '#0C001A',
   },
   sourceCategory: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 11,
     color: '#0C001A',
     opacity: 0.5,
     marginBottom: 4,
   },
   sourceSummary: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 12,
     color: '#0C001A',
     lineHeight: 18,
@@ -665,20 +924,60 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   ideaCardTitle: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 16,
     fontWeight: 'bold',
     color: '#0C001A',
   },
   ideaCardDomain: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 12,
     color: '#0C001A',
     opacity: 0.6,
     marginTop: 2,
   },
   ideaCardScore: {
+    fontFamily: 'NotoSerif_400Regular',
     fontSize: 12,
     color: '#0C001A',
     marginTop: 4,
     fontWeight: '600',
+  },
+  ideaDetailPanel: {
+    width: '85%',
+    maxHeight: '80%',
+    backgroundColor: '#FFFDEE',
+    borderRadius: 10,
+    padding: 20,
+  },
+  ideaDetailTitle: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#0C001A',
+    marginBottom: 15,
+  },
+  ideaDetailScroll: {
+    maxHeight: 400,
+    marginBottom: 20,
+  },
+  ideaDetailDescription: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 16,
+    color: '#0C001A',
+    lineHeight: 24,
+  },
+  closeButton: {
+    backgroundColor: '#0C001A',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 5,
+    alignSelf: 'center',
+  },
+  closeButtonText: {
+    fontFamily: 'NotoSerif_400Regular',
+    color: '#FFFDEE',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

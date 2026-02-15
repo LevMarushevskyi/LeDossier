@@ -419,3 +419,175 @@ BUG FIXES & CHANGES
   - SameSite='None' requires HTTPS (Secure=True), incompatible with localhost HTTP
   - SameSite='Lax' works with HTTP and allows OAuth redirects
   - Fixes MismatchingStateError: "CSRF Warning! State not equal in request and response"
+
+[2026-02-15 10:00] Removed Notification page and navigation
+  - Removed Notification screen from App.tsx navigation stack
+  - Removed Notification import from App.tsx
+  - Removed Notifications button from IdeaVault.tsx header
+  - Removed unused navButton and navButtonText styles from IdeaVault.tsx
+  - Notification.tsx file remains but is no longer referenced
+
+[2026-02-15 10:15] Implemented physics-based draggable idea cards
+  - Installed react-native-reanimated@3.19.5 for animations
+  - Installed matter-js@0.20.0 for physics simulation
+  - Installed @types/matter-js@0.19.7 for TypeScript support
+  - Created babel.config.js with react-native-reanimated plugin
+  - Created utils/PhysicsEngine.ts - Encapsulates Matter.js physics world
+    - Manages physics bodies, boundaries, velocity, and collisions
+    - Gravity set to 0.5 for subtle downward force
+    - Restitution 0.85 (high bounciness)
+    - Friction 0.01 (minimal drag)
+    - Sleep threshold 60 to prevent premature freezing
+    - Boundary walls at screen edges
+  - Created components/DraggableIdeaCard.tsx - Individual draggable card component
+    - Uses PanGestureHandler for drag interactions
+    - Gesture.Race to distinguish tap vs drag
+    - Card dimensions: 160x120px
+    - Shows only idea name (not description)
+    - Dark purple (#0C001A) background with cream (#FFFDEE) text and border
+  - Transformed IdeaVault.tsx to use physics system
+    - Added x, y position properties to Idea interface
+    - Replaced ScrollView with physics container
+    - Added GestureHandlerRootView wrapper
+    - Physics update loop using requestAnimationFrame
+    - Shared values using makeMutable API (not useSharedValue in loops)
+    - Cards spawn at top-center with cascade offset
+    - Immediate rendering with forceUpdate mechanism
+
+[2026-02-15 10:30] Enhanced physics behavior
+  - Increased bounciness (restitution from 0.6 to 0.85)
+  - Added rotational velocity based on drag direction
+    - Horizontal drag velocity converted to angular velocity (velocityX * 0.002)
+    - Right drag = clockwise spin, left drag = counterclockwise spin
+  - Fixed physics freezing issues
+    - Added Matter.Sleeping.set(body, false) when dragging
+    - Wake bodies before applying velocity
+    - Increased sleepThreshold to 60 frames
+  - Constrained cards to container boundaries
+    - Added position clamping during drag (based on CARD_WIDTH/2 and CARD_HEIGHT/2)
+    - Added boundary clamping in PhysicsEngine.updateCardPosition
+    - Cards cannot be dragged outside central content box
+
+[2026-02-15 11:00] UI/UX improvements
+  - Moved sign out button to top right corner
+    - Changed from header View to absolute positioning
+    - Position: top: 40px, right: 20px
+    - Added zIndex: 100 to stay above other elements
+  - Expanded idea creation panel
+    - Modal positioned at top instead of center (justifyContent: 'flex-start')
+    - Panel width increased from 80% to 90%
+    - Added maxHeight: 70% for large vertical space
+    - Increased padding from 20px to 30px
+  - Added spacing between confirm/cancel buttons
+    - Updated buttonRow style with gap: 20px
+    - Changed justifyContent from 'space-around' to 'center'
+    - Affects all button pairs (Confirm/Delete, Continue/Cancel)
+
+[2026-02-15 11:30] Added Perlin noise texture backgrounds with dithering
+  - Created components/BackgroundNoise.tsx using SVG filters
+    - Uses react-native-svg (already installed)
+    - FeTurbulence filter with type="turbulence" for Perlin noise
+    - BaseFrequency: 0.8, NumOctaves: 4
+    - FeColorMatrix for posterization dithering effect
+    - StitchTiles enabled for seamless tiling
+    - Configurable baseColor and opacity props
+    - Absolute fill positioning with pointerEvents="none"
+    - Explicit width/height 100% with preserveAspectRatio="xMidYMid slice"
+  - Added BackgroundNoise to all screens
+    - Home.tsx: opacity 0.2
+    - SignIn.tsx: opacity 0.2
+    - IdeaVault.tsx: opacity 0.2
+  - Subtle organic texture on dark purple backgrounds
+
+[2026-02-15 11:45] Font consistency enforcement
+  - Audited all Text components across codebase (24 total styles)
+  - Added NotoSerif_400Regular to all text styles missing fontFamily:
+    - IdeaVault.tsx: 13 text styles updated
+      - signOutButtonText, boxText, actionButtonText, backButtonText
+      - panelTitle, confirmButtonText, deleteButtonText
+      - alertTitle, alertMessage, alertButtonText
+      - ideaDetailTitle, ideaDetailDescription, closeButtonText
+    - SignIn.tsx: 3 text styles updated
+      - loadingText, errorText, backButtonText
+    - DraggableIdeaCard.tsx: 2 text styles updated
+      - cardTitle, cardPreview
+  - Font usage:
+    - PetitFormalScript_400Regular: Main page titles only
+    - NotoSerif_400Regular: All other text (buttons, labels, body text)
+  - Ensures consistent typography across entire application
+
+[2026-02-15 12:00] Enhanced background noise texture and dithering
+  - Increased Perlin noise size significantly
+    - Reduced baseFrequency from 0.05 to 0.0167 (tripled pattern size)
+    - Creates larger, more visible noise blocks
+  - Quadrupled Bayer dithering pixel resolution
+    - Increased pattern dimensions from 4x4 to 16x16 pixels
+    - Changed each dithering cell from 1x1 to 4x4 pixels
+    - Pattern now clearly visible with blocky retro aesthetic
+  - Researched open source Bayer dithering shader implementations
+    - Found implementations from hughsk/glsl-dither, Godot Shaders, and Shadertoy
+    - Attempted GLSL shader with react-native-skia RuntimeEffect
+    - Reverted to SVG approach due to shader compatibility issues
+  - Fixed shader persistence across page navigation
+    - Added unique IDs using useMemo to prevent conflicts
+    - Each BackgroundNoise instance generates unique filter and pattern IDs
+    - Fixed issue where background disappeared when navigating between screens
+  - Optimized opacity for dominant dark areas
+    - Adjusted noise layer opacity from 2x to 1.2x to 0.6x (final: 0.09)
+    - Adjusted dithering pattern opacity from 3x to 1.5x to 0.8x (final: 0.12)
+    - Dark purple (#0C001A) now dominates with subtle cream (#FFFDEE) texture
+  - Bayer matrix values based on Godot Shaders implementation
+    - 4x4 ordered dithering with normalized threshold values (0-15)/16
+    - Creates authentic retro dithered appearance
+
+[2026-02-15 13:00] Migrated from Idea interface to Dossier interface
+  - Removed Idea interface completely, now using only Dossier throughout app
+  - Updated property names to match backend API:
+    - name → title
+    - description → rawInput
+    - id → ideaId
+    - x and y remain the same for physics positioning
+  - Changed all ID types from number to string (ideaId is string in backend)
+  - Updated PhysicsEngine.ts to use string IDs instead of number IDs
+  - Updated DraggableIdeaCard.tsx to accept Dossier interface
+  - Updated handleConfirm to send correct API payload with title and rawInput
+  - Fixed rendering logic to properly display dossier content vs physics cards
+  - Added navButton and navButtonText styles for "All Ideas" navigation
+  - Completely removed remaining Notification references from App.tsx
+    - Removed Notification import
+    - Removed Notification Stack.Screen from navigation
+    - Notification.tsx file already deleted in previous session
+
+[2026-02-15 14:00] Fixed AWS Amplify UUID module resolution error
+  - Added required polyfills for uuid package in React Native/Expo environment
+  - Installed react-native-get-random-values and react-native-url-polyfill
+  - Added polyfill imports at top of index.ts (must load before any other code)
+  - Resolves "./nil.js" module resolution error from @aws-amplify/core
+  - UUID package requires native crypto polyfills to work in React Native
+  - Both polyfills must be imported as first imports in entry file for proper initialization
+
+[2026-02-15 14:30] Fixed frontend-backend API parameter mismatch
+  - Updated Lambda handler to accept 'title' and 'rawInput' instead of 'name' and 'description'
+  - Frontend was sending { title, rawInput } but backend expected { name, description }
+  - This mismatch would have caused all IDEATE requests to fail with 400 error
+  - Updated analyzeIdea function parameters to use title and rawInput
+  - Updated all references throughout Lambda handler (lines 271, 273, 306, 364, 372-373)
+  - Frontend and backend now fully aligned on Dossier interface property names
+
+[2026-02-15 15:00] Fixed all text components to use specified fonts
+  - Added fontFamily: 'NotoSerif_400Regular' to 19 text styles in IdeaVault.tsx that were missing font specifications
+  - Updated styles: loadingText, loadingSubtext, errorTitle, errorText, retryButtonText
+  - Updated styles: dossierTitle, dossierDomain, tagText
+  - Updated styles: confidenceLabel, confidenceScore
+  - Updated styles: sectionHeader, sectionBody, bulletItem
+  - Updated styles: sourceTitle, sourceCategory, sourceSummary
+  - Updated styles: ideaCardTitle, ideaCardDomain, ideaCardScore
+  - All text in the app now consistently uses either PetitFormalScript (titles) or NotoSerif (body text)
+  - Ensures consistent typography across all screens and prevents fallback to system fonts
+
+[2026-02-15 15:15] Fixed "There is already a signed in user" authentication error
+  - Updated login() and register() functions in AuthContext to sign out existing session first
+  - AWS Amplify throws error when trying to sign in/register while session exists
+  - Added try/catch wrapped signOut() before signIn() and signUp() calls
+  - Silently ignores errors if no user is currently signed in
+  - Resolves issue where users couldn't sign in or register due to persisted sessions
