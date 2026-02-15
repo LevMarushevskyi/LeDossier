@@ -31,16 +31,16 @@
         }
       }
     },
-    "9c12c0fba865ad803a632a484d6a52428a6307a8cb44935a7dc3f9c25ce81cd4": {
+    "e971533c091fdc3f77251baa75f0e7ec67e9d4077e55639bba760d6fc979cce3": {
       "displayName": "LeDossierStack Template",
       "source": {
         "path": "LeDossierStack.template.json",
         "packaging": "file"
       },
       "destinations": {
-        "129751814064-us-east-1-615a41e1": {
+        "129751814064-us-east-1-568f1d76": {
           "bucketName": "cdk-hnb659fds-assets-129751814064-us-east-1",
-          "objectKey": "9c12c0fba865ad803a632a484d6a52428a6307a8cb44935a7dc3f9c25ce81cd4.json",
+          "objectKey": "e971533c091fdc3f77251baa75f0e7ec67e9d4077e55639bba760d6fc979cce3.json",
           "region": "us-east-1",
           "assumeRoleArn": "arn:${AWS::Partition}:iam::129751814064:role/cdk-hnb659fds-file-publishing-role-129751814064-us-east-1"
         }

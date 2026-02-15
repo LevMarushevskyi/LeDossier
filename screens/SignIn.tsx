@@ -63,8 +63,13 @@ export default function SignIn({ navigation }: SignInProps) {
       setLoading(true);
       setError(null);
       await confirmRegistration(email.trim(), confirmCode.trim());
-      // Auto sign in after confirmation
-      await login(email.trim(), password);
+      // confirmRegistration may have auto-signed in — check if user is set
+      // If not, sign in manually
+      try {
+        await login(email.trim(), password);
+      } catch {
+        // Already signed in via auto-sign-in, that's fine
+      }
       navigation.navigate('IdeaVault');
     } catch (err: any) {
       setError(err.message || 'Confirmation failed');

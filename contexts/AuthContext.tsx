@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getCurrentUser, fetchAuthSession, signIn, signOut, signUp, confirmSignUp } from 'aws-amplify/auth';
+import { getCurrentUser, fetchAuthSession, signIn, signOut, signUp, confirmSignUp, autoSignIn } from 'aws-amplify/auth';
 
 interface AuthContextType {
   user: { userId: string; email: string } | null;
@@ -56,7 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function confirmRegistration(email: string, code: string) {
-    await confirmSignUp({ username: email, confirmationCode: code });
+    const result = await confirmSignUp({ username: email, confirmationCode: code });
+    // If Cognito auto-signs in after confirmation, complete that flow
+    if (result.nextStep?.signUpStep === 'COMPLETE_AUTO_SIGN_IN') {
+      await autoSignIn();
+      await checkCurrentUser();
+    }
   }
 
   async function getAuthToken(): Promise<string | null> {
