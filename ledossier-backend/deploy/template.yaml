@@ -99,7 +99,7 @@ Resources:
                   - bedrock:Converse
                 Resource: '*'
 
-  # --- Lambda Function ---
+  # --- Lambda Functions ---
 
   IdeaIntakeFunction:
     Type: AWS::Lambda::Function
@@ -113,6 +113,46 @@ Resources:
       Code:
         S3Bucket: !Sub ledossier-lambda-code-${AWS::AccountId}
         S3Key: idea-intake.zip
+      Environment:
+        Variables:
+          IDEAS_TABLE: !Ref IdeasTable
+          UPDATES_TABLE: !Ref UpdatesTable
+          DOSSIER_BUCKET: !Ref DossierBucket
+          GEMINI_API_KEY: !Ref GeminiApiKey
+          USER_POOL_ID: us-east-1_XSZEJwbSO
+          USER_POOL_CLIENT_ID: 1n389pqmf8khutobtkj23rpd8n
+
+  SurveillanceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: LeDossier-Surveillance
+      Runtime: nodejs18.x
+      Handler: index.handler
+      Timeout: 300
+      MemorySize: 512
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Sub ledossier-lambda-code-${AWS::AccountId}
+        S3Key: surveillance.zip
+      Environment:
+        Variables:
+          IDEAS_TABLE: !Ref IdeasTable
+          UPDATES_TABLE: !Ref UpdatesTable
+          DOSSIER_BUCKET: !Ref DossierBucket
+          GEMINI_API_KEY: !Ref GeminiApiKey
+
+  IdeaViewFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: LeDossier-IdeaView
+      Runtime: nodejs18.x
+      Handler: index.handler
+      Timeout: 60
+      MemorySize: 256
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Sub ledossier-lambda-code-${AWS::AccountId}
+        S3Key: idea-view.zip
       Environment:
         Variables:
           IDEAS_TABLE: !Ref IdeasTable
@@ -188,12 +228,16 @@ Resources:
       MethodResponses:
         - StatusCode: '200'
 
-  ApiDeploymentV2:
+  ApiDeploymentPhase2:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - IdeasPostMethod
       - IdeasGetMethod
       - IdeasOptionsMethod
+      - SingleIdeaGetMethod
+      - SingleIdeaOptionsMethod
+      - SurveillanceTriggerPostMethod
+      - SurveillanceTriggerOptionsMethod
     Properties:
       RestApiId: !Ref ApiGateway
 
@@ -201,7 +245,7 @@ Resources:
     Type: AWS::ApiGateway::Stage
     Properties:
       RestApiId: !Ref ApiGateway
-      DeploymentId: !Ref ApiDeploymentV2
+      DeploymentId: !Ref ApiDeploymentPhase2
       StageName: prod
 
   LambdaApiPermission:
@@ -219,6 +263,144 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/GET/ideas
+
+  # --- EventBridge Schedule for Surveillance ---
+
+  SurveillanceScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: LeDossier-Surveillance
+      Description: Runs idea surveillance every 6 hours
+      ScheduleExpression: rate(6 hours)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt SurveillanceFunction.Arn
+          Id: SurveillanceTarget
+
+  SurveillanceSchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SurveillanceFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt SurveillanceScheduleRule.Arn
+
+  # --- /ideas/{ideaId} resource ---
+
+  SingleIdeaResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !Ref IdeasResource
+      PathPart: '{ideaId}'
+
+  SingleIdeaOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref SingleIdeaResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  SingleIdeaGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref SingleIdeaResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${IdeaViewFunction.Arn}/invocations
+      MethodResponses:
+        - StatusCode: '200'
+
+  IdeaViewApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IdeaViewFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/GET/ideas/*
+
+  # --- /surveillance/trigger resource ---
+
+  SurveillanceApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: surveillance
+
+  SurveillanceTriggerResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ParentId: !Ref SurveillanceApiResource
+      PathPart: trigger
+
+  SurveillanceTriggerOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref SurveillanceTriggerResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  SurveillanceTriggerPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref SurveillanceTriggerResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SurveillanceFunction.Arn}/invocations
+      MethodResponses:
+        - StatusCode: '200'
+
+  SurveillanceTriggerApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SurveillanceFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/surveillance/trigger
 
   # --- Lambda Function URL (no timeout cap) ---
 
@@ -245,6 +427,28 @@ Resources:
       Principal: '*'
       FunctionUrlAuthType: NONE
 
+  SurveillanceFunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      AuthType: NONE
+      TargetFunctionArn: !Ref SurveillanceFunction
+      Cors:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - POST
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+
+  SurveillanceFunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SurveillanceFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: '*'
+      FunctionUrlAuthType: NONE
+
 Outputs:
   ApiUrl:
     Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/
@@ -252,6 +456,9 @@ Outputs:
   FunctionUrl:
     Value: !GetAtt IdeaIntakeFunctionUrl.FunctionUrl
     Description: Lambda Function URL (no timeout limit - use this one)
+  SurveillanceFunctionUrl:
+    Value: !GetAtt SurveillanceFunctionUrl.FunctionUrl
+    Description: Surveillance Lambda Function URL (no timeout limit)
   IdeasTableName:
     Value: !Ref IdeasTable
   BucketName:

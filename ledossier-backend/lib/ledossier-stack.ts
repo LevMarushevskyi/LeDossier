@@ -6,6 +6,8 @@ import * as lambdaRuntime from "aws-cdk-lib/aws-lambda";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cognito from "aws-cdk-lib/aws-cognito";
+import * as events from "aws-cdk-lib/aws-events";
+import * as targets from "aws-cdk-lib/aws-events-targets";
 import { Construct } from "constructs";
 import * as path from "path";
 
@@ -128,6 +130,90 @@ export class LeDossierStack extends cdk.Stack {
         authorizer,
         authorizationType: apigateway.AuthorizationType.COGNITO,
       }
+    );
+
+    // --- Surveillance Lambda ---
+
+    const surveillanceFn = new lambda.NodejsFunction(this, "SurveillanceFn", {
+      entry: path.join(__dirname, "../lambda/surveillance/index.ts"),
+      handler: "handler",
+      runtime: lambdaRuntime.Runtime.NODEJS_18_X,
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 512,
+      environment: {
+        IDEAS_TABLE: ideasTable.tableName,
+        UPDATES_TABLE: updatesTable.tableName,
+        DOSSIER_BUCKET: dossierBucket.bucketName,
+        GEMINI_API_KEY: geminiApiKey,
+      },
+      bundling: { externalModules: [], minify: true, sourceMap: true },
+    });
+
+    ideasTable.grantReadWriteData(surveillanceFn);
+    updatesTable.grantReadWriteData(surveillanceFn);
+    dossierBucket.grantReadWrite(surveillanceFn);
+    surveillanceFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream", "bedrock:Converse"],
+        resources: ["*"],
+      })
+    );
+
+    // --- EventBridge Schedule ---
+
+    const surveillanceRule = new events.Rule(this, "SurveillanceSchedule", {
+      ruleName: "LeDossier-Surveillance",
+      schedule: events.Schedule.rate(cdk.Duration.hours(6)),
+      description: "Runs idea surveillance every 6 hours",
+    });
+    surveillanceRule.addTarget(new targets.LambdaFunction(surveillanceFn));
+
+    // --- Idea View Lambda ---
+
+    const ideaViewFn = new lambda.NodejsFunction(this, "IdeaViewFn", {
+      entry: path.join(__dirname, "../lambda/idea-view/index.ts"),
+      handler: "handler",
+      runtime: lambdaRuntime.Runtime.NODEJS_18_X,
+      timeout: cdk.Duration.seconds(60),
+      memorySize: 256,
+      environment: {
+        IDEAS_TABLE: ideasTable.tableName,
+        UPDATES_TABLE: updatesTable.tableName,
+        DOSSIER_BUCKET: dossierBucket.bucketName,
+        GEMINI_API_KEY: geminiApiKey,
+        USER_POOL_ID: "us-east-1_XSZEJwbSO",
+        USER_POOL_CLIENT_ID: "1n389pqmf8khutobtkj23rpd8n",
+      },
+      bundling: { externalModules: [], minify: true, sourceMap: true },
+    });
+
+    ideasTable.grantReadWriteData(ideaViewFn);
+    updatesTable.grantReadWriteData(ideaViewFn);
+    dossierBucket.grantReadWrite(ideaViewFn);
+    ideaViewFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream", "bedrock:Converse"],
+        resources: ["*"],
+      })
+    );
+
+    // --- New API Routes ---
+
+    // GET /ideas/{ideaId} → view single idea + trigger return briefing
+    const singleIdea = ideasResource.addResource("{ideaId}");
+    singleIdea.addMethod(
+      "GET",
+      new apigateway.LambdaIntegration(ideaViewFn),
+      { authorizer, authorizationType: apigateway.AuthorizationType.COGNITO }
+    );
+
+    // POST /surveillance/trigger → manual trigger for demo
+    const surveillanceResource = api.root.addResource("surveillance");
+    const triggerResource = surveillanceResource.addResource("trigger");
+    triggerResource.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(surveillanceFn),
+      { authorizer, authorizationType: apigateway.AuthorizationType.COGNITO }
     );
 
     // --- Outputs ---

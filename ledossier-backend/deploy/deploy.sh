@@ -12,26 +12,50 @@ if [ -z "$GEMINI_API_KEY" ]; then
   exit 1
 fi
 
-echo "==> Bundling Lambda with esbuild..."
+echo "==> Bundling Lambda: idea-intake..."
 cd "$(dirname "$0")/.."
 npx esbuild lambda/idea-intake/index.ts \
   --bundle \
   --platform=node \
   --target=node18 \
-  --outfile=deploy/dist/index.js \
+  --outfile=deploy/dist/idea-intake/index.js \
   --minify \
   --sourcemap
 
-echo "==> Creating zip..."
-cd deploy/dist
-zip -j ../idea-intake.zip index.js index.js.map
-cd ../..
+echo "==> Bundling Lambda: surveillance..."
+npx esbuild lambda/surveillance/index.ts \
+  --bundle \
+  --platform=node \
+  --target=node18 \
+  --outfile=deploy/dist/surveillance/index.js \
+  --minify \
+  --sourcemap
+
+echo "==> Bundling Lambda: idea-view..."
+npx esbuild lambda/idea-view/index.ts \
+  --bundle \
+  --platform=node \
+  --target=node18 \
+  --outfile=deploy/dist/idea-view/index.js \
+  --minify \
+  --sourcemap
+
+echo "==> Creating zips..."
+cd deploy/dist/idea-intake
+zip -j ../../idea-intake.zip index.js index.js.map
+cd ../surveillance
+zip -j ../../surveillance.zip index.js index.js.map
+cd ../idea-view
+zip -j ../../idea-view.zip index.js index.js.map
+cd ../../..
 
 echo "==> Ensuring S3 code bucket exists..."
 aws s3 mb "s3://${CODE_BUCKET}" --region "${REGION}" 2>/dev/null || true
 
-echo "==> Uploading Lambda zip to S3..."
+echo "==> Uploading Lambda zips to S3..."
 aws s3 cp deploy/idea-intake.zip "s3://${CODE_BUCKET}/idea-intake.zip"
+aws s3 cp deploy/surveillance.zip "s3://${CODE_BUCKET}/surveillance.zip"
+aws s3 cp deploy/idea-view.zip "s3://${CODE_BUCKET}/idea-view.zip"
 
 echo "==> Deploying CloudFormation stack..."
 aws cloudformation deploy \
@@ -51,5 +75,8 @@ aws cloudformation describe-stacks \
   --output table
 
 echo ""
-echo "Done! Use the ApiUrl above to test with:"
-echo "curl -X POST <ApiUrl>ideas -H 'Content-Type: application/json' -d '{\"title\":\"Test Idea\",\"rawInput\":\"A test idea\"}'"
+echo "Done! API routes available:"
+echo "  POST /ideas          — create new idea"
+echo "  GET  /ideas          — list all ideas"
+echo "  GET  /ideas/{ideaId} — view idea + return briefing"
+echo "  POST /surveillance/trigger — manual surveillance sweep"

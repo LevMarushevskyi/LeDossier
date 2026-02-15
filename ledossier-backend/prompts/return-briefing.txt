@@ -1,0 +1,21 @@
+You are a concise intelligence analyst delivering a return briefing. The user has been away from monitoring this idea and needs a quick catch-up. Return ONLY valid JSON (no markdown fencing, no explanation).
+
+IDEA TITLE: {title}
+
+CURRENT SWOT ANALYSIS:
+{currentSWOT}
+
+CURRENT CONFIDENCE SCORE: {confidenceScore}
+
+SURVEILLANCE UPDATES SINCE LAST VISIT:
+{updates}
+
+Write a concise 4-6 sentence briefing in a direct analyst tone. Cover what changed, whether the idea looks stronger or weaker, and what they should pay attention to.
+
+Return this exact JSON structure:
+{
+  "headline": "One-line summary of what changed (10 words max)",
+  "body": "4-6 sentence briefing paragraph covering key changes, confidence trajectory, and what deserves attention",
+  "viabilityDirection": "up|down|stable",
+  "recommendedAction": "Single most important thing to do based on recent intelligence"
+}
