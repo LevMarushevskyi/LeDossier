@@ -35,12 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function login(email: string, password: string) {
-    try {
-      // Sign out any existing session first to avoid "already signed in" error
-      await signOut();
-    } catch {
-      // Ignore errors if no user is signed in
-    }
+    // Sign out any existing session first to avoid "already signed in" errors
+    try { await signOut(); } catch {}
     const result = await signIn({ username: email, password });
     if (result.isSignedIn) {
       await checkCurrentUser();
@@ -53,12 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function register(email: string, password: string) {
-    try {
-      // Sign out any existing session first to avoid "already signed in" error
-      await signOut();
-    } catch {
-      // Ignore errors if no user is signed in
-    }
     const result = await signUp({
       username: email,
       password,

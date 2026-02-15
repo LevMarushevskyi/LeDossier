@@ -16,7 +16,9 @@ interface Dossier {
   rawInput: string;
   status: string;
   createdAt: string;
-  analysis: {
+  tags?: string[];
+  confidenceScore?: number;
+  analysis?: {
     enrichedDescription: string;
     domain: string;
     targetMarket: string;
@@ -24,7 +26,7 @@ interface Dossier {
     searchQueries: string[];
     keyAssumptions: string[];
   };
-  research: {
+  research?: {
     sources: Array<{
       title: string;
       url: string;
@@ -35,16 +37,20 @@ interface Dossier {
     }>;
     landscapeSummary: string;
   };
-  swot: {
-    swot: {
+  swot?: {
+    swot?: {
       strengths: string[];
       weaknesses: string[];
       opportunities: string[];
       threats: string[];
     };
-    confidenceScore: number;
-    confidenceRationale: string;
-    recommendedNextStep: string;
+    strengths?: string[];
+    weaknesses?: string[];
+    opportunities?: string[];
+    threats?: string[];
+    confidenceScore?: number;
+    confidenceRationale?: string;
+    recommendedNextStep?: string;
   };
   x: number;
   y: number;
@@ -81,6 +87,31 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const [, forceUpdate] = useState({});
 
   const MAX_CARDS = 20;
+
+  // Fetch stored ideas on mount
+  useEffect(() => {
+    const fetchIdeas = async () => {
+      try {
+        const token = await getAuthToken();
+        const response = await fetch(`${API_URL}/ideas`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (response.ok && data.ideas) {
+          const stored = data.ideas.map((idea: any, i: number) => ({
+            ...idea,
+            x: 80 + (i % 3) * 100,
+            y: 80 + Math.floor(i / 3) * 80,
+          }));
+          setDossiers(stored);
+          setIdeas(stored);
+        }
+      } catch (err) {
+        console.error('Failed to fetch ideas:', err);
+      }
+    };
+    fetchIdeas();
+  }, []);
 
   // Calculate spawn position for new cards (cascade from top-center)
   const getSpawnPosition = () => {
@@ -205,61 +236,79 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
     }
 
     if (activeDossier) {
-      const s = activeDossier.swot.swot ?? activeDossier.swot;
+      const s = activeDossier.swot?.swot ?? activeDossier.swot;
+      const tags = activeDossier.analysis?.tags ?? activeDossier.tags ?? [];
+      const confidence = activeDossier.swot?.confidenceScore ?? activeDossier.confidenceScore ?? 0;
       return (
         <ScrollView style={styles.dossierScroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.dossierTitle}>{activeDossier.title}</Text>
-          <Text style={styles.dossierDomain}>{activeDossier.analysis.domain}</Text>
+          {activeDossier.analysis?.domain && (
+            <Text style={styles.dossierDomain}>{activeDossier.analysis.domain}</Text>
+          )}
 
-          <View style={styles.tagsRow}>
-            {activeDossier.analysis.tags.map((tag, i) => (
-              <View key={i} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
+          {tags.length > 0 && (
+            <View style={styles.tagsRow}>
+              {tags.map((tag: string, i: number) => (
+                <View key={i} style={styles.tag}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           <View style={styles.confidenceBadge}>
             <Text style={styles.confidenceLabel}>Confidence</Text>
             <Text style={styles.confidenceScore}>
-              {Math.round((activeDossier.swot.confidenceScore ?? 0) * 100)}%
+              {Math.round(confidence * 100)}%
             </Text>
           </View>
 
-          <Text style={styles.sectionHeader}>Analysis</Text>
-          <Text style={styles.sectionBody}>{activeDossier.analysis.enrichedDescription}</Text>
+          {activeDossier.analysis?.enrichedDescription && (
+            <>
+              <Text style={styles.sectionHeader}>Analysis</Text>
+              <Text style={styles.sectionBody}>{activeDossier.analysis.enrichedDescription}</Text>
+            </>
+          )}
 
           <Text style={styles.sectionHeader}>Strengths</Text>
-          {(s.strengths ?? []).map((item: string, i: number) => (
+          {(s?.strengths ?? []).map((item: string, i: number) => (
             <Text key={i} style={styles.bulletItem}>• {item}</Text>
           ))}
 
           <Text style={styles.sectionHeader}>Weaknesses</Text>
-          {(s.weaknesses ?? []).map((item: string, i: number) => (
+          {(s?.weaknesses ?? []).map((item: string, i: number) => (
             <Text key={i} style={styles.bulletItem}>• {item}</Text>
           ))}
 
           <Text style={styles.sectionHeader}>Opportunities</Text>
-          {(s.opportunities ?? []).map((item: string, i: number) => (
+          {(s?.opportunities ?? []).map((item: string, i: number) => (
             <Text key={i} style={styles.bulletItem}>• {item}</Text>
           ))}
 
           <Text style={styles.sectionHeader}>Threats</Text>
-          {(s.threats ?? []).map((item: string, i: number) => (
+          {(s?.threats ?? []).map((item: string, i: number) => (
             <Text key={i} style={styles.bulletItem}>• {item}</Text>
           ))}
 
-          <Text style={styles.sectionHeader}>Research Sources</Text>
-          {activeDossier.research.sources.slice(0, 5).map((src, i) => (
-            <View key={i} style={styles.sourceItem}>
-              <Text style={styles.sourceTitle}>{src.title}</Text>
-              <Text style={styles.sourceCategory}>{src.category} — relevance: {Math.round(src.relevanceScore * 100)}%</Text>
-              <Text style={styles.sourceSummary}>{src.summary}</Text>
-            </View>
-          ))}
+          {activeDossier.research?.sources && activeDossier.research.sources.length > 0 && (
+            <>
+              <Text style={styles.sectionHeader}>Research Sources</Text>
+              {activeDossier.research.sources.slice(0, 5).map((src, i) => (
+                <View key={i} style={styles.sourceItem}>
+                  <Text style={styles.sourceTitle}>{src.title}</Text>
+                  <Text style={styles.sourceCategory}>{src.category} — relevance: {Math.round(src.relevanceScore * 100)}%</Text>
+                  <Text style={styles.sourceSummary}>{src.summary}</Text>
+                </View>
+              ))}
+            </>
+          )}
 
-          <Text style={styles.sectionHeader}>Recommended Next Step</Text>
-          <Text style={styles.sectionBody}>{activeDossier.swot.recommendedNextStep}</Text>
+          {activeDossier.swot?.recommendedNextStep && (
+            <>
+              <Text style={styles.sectionHeader}>Recommended Next Step</Text>
+              <Text style={styles.sectionBody}>{activeDossier.swot.recommendedNextStep}</Text>
+            </>
+          )}
 
           <View style={{ height: 20 }} />
         </ScrollView>
@@ -272,9 +321,11 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
           {dossiers.map((d, i) => (
             <TouchableOpacity key={i} style={styles.ideaCard} onPress={() => setActiveDossier(d)}>
               <Text style={styles.ideaCardTitle}>{d.title}</Text>
-              <Text style={styles.ideaCardDomain}>{d.analysis.domain}</Text>
+              {d.analysis?.domain && (
+                <Text style={styles.ideaCardDomain}>{d.analysis.domain}</Text>
+              )}
               <Text style={styles.ideaCardScore}>
-                Confidence: {Math.round((d.swot.confidenceScore ?? 0) * 100)}%
+                Confidence: {Math.round((d.swot?.confidenceScore ?? d.confidenceScore ?? 0) * 100)}%
               </Text>
             </TouchableOpacity>
           ))}
@@ -585,9 +636,10 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    padding: 20,
+    paddingTop: 90,
+    paddingHorizontal: 20,
   },
   pageTitle: {
     fontFamily: 'PetitFormalScript_400Regular',

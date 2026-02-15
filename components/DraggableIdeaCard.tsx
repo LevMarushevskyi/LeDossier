@@ -13,9 +13,9 @@ interface Dossier {
   rawInput: string;
   status: string;
   createdAt: string;
-  analysis: any;
-  research: any;
-  swot: any;
+  analysis?: any;
+  research?: any;
+  swot?: any;
   x: number;
   y: number;
 }

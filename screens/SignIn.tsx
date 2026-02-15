@@ -30,7 +30,8 @@ export default function SignIn({ navigation }: SignInProps) {
       await login(email.trim(), password);
       navigation.navigate('IdeaVault');
     } catch (err: any) {
-      setError(err.message || 'Sign in failed');
+      console.log('Sign in error:', JSON.stringify(err, null, 2));
+      setError(err.message || err.name || String(err) || 'Sign in failed');
     } finally {
       setLoading(false);
     }
@@ -49,7 +50,8 @@ export default function SignIn({ navigation }: SignInProps) {
         setMode('confirmCode');
       }
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      console.log('Register error:', JSON.stringify(err, null, 2));
+      setError(err.message || err.name || String(err) || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -73,7 +75,8 @@ export default function SignIn({ navigation }: SignInProps) {
       }
       navigation.navigate('IdeaVault');
     } catch (err: any) {
-      setError(err.message || 'Confirmation failed');
+      console.log('Confirm error:', JSON.stringify(err, null, 2));
+      setError(err.message || err.name || String(err) || 'Confirmation failed');
     } finally {
       setLoading(false);
     }
