@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 # Use a fixed secret key for development (OAuth state needs consistent session)
 # In production, use a secure random key from environment variable
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production-abc123')
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', '@mazonSucks123')
 
 # Configure session cookies for localhost development
 # SameSite='Lax' works with HTTP (localhost), 'None' requires HTTPS
