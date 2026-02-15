@@ -30,8 +30,8 @@
 **Result**: Diff-aware SWOT update comparing new research against existing analysis, adjusts confidence score, produces changeSummary
 **Iteration**: v1
 
-## [Hour X] — Return Briefing Prompt (Bedrock) — SUPERSEDED
+## [Hour X] — Return Briefing Prompt (Bedrock)
 **Tool**: AWS Bedrock (NVIDIA Nemotron Nano 12B v2)
 **Prompt**: See ledossier-backend/prompts/return-briefing.txt
-**Result**: Originally generated concise intelligence briefing for users returning after 24+ hours. Superseded by surveillance-generated reports in Phase 2 — idea-view Lambda now reads latestReport from DynamoDB instead of calling Bedrock. Prompt file is orphaned.
-**Iteration**: v1 (deprecated)
+**Result**: Generates concise intelligence briefing for users returning after 24+ hours, includes viability direction and recommended action
+**Iteration**: v1

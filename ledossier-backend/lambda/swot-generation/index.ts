@@ -32,25 +32,12 @@ Return this exact JSON structure:
       "Specific threat 3 based on research"
     ]
   },
-  "confidenceScore": "<REPLACE: use rubric>",
-  "confidenceRationale": "Explanation referencing specific rubric tier and evidence that places the idea there",
+  "confidenceScore": 0.65,
+  "confidenceRationale": "Explanation of why this confidence level was assigned. 0.3-0.4 = questionable, 0.5-0.6 = plausible, 0.7-0.8 = strong evidence, 0.9+ = exceptionally rare",
   "recommendedNextStep": "The single most impactful next step the founder should take"
 }
 
-Be specific, not generic. Reference actual findings from the research.
-
-Before scoring, ask yourself: "Would I invest my own money in this idea based on what the research shows?" If the answer is "absolutely not," score below 0.30. If "maybe, with caveats," score 0.40-0.55. If "yes, this looks viable," score 0.60-0.75.
-
-CONFIDENCE SCORING RUBRIC — Follow this precisely:
-0.00-0.15: DEAD ON ARRIVAL. Fatal flaw: problem already solved, market doesn't exist, or dominant competitor with unassailable moat.
-0.15-0.30: SEVERELY CHALLENGED. Multiple critical weaknesses: tiny/shrinking market, broken unit economics, or 3+ well-funded competitors.
-0.30-0.45: QUESTIONABLE. Kernel of validity but serious headwinds: crowded market, regulatory risk, or key assumptions contradicted by research.
-0.45-0.60: PLAUSIBLE BUT UNPROVEN. Real market need, significant unknowns. This is where MOST ideas land on first analysis.
-0.60-0.75: PROMISING. Research actively confirms viability. Clear market gap, manageable competition. Reserve for research-backed ideas.
-0.75-0.85: STRONG. Multiple data points confirm viability across dimensions. Only when evidence is compelling.
-0.85-1.00: EXCEPTIONAL. Almost never appropriate.
-
-CRITICAL: Use the FULL range. A score of 0.20 for a bad idea is MORE helpful than a polite 0.55. Do NOT default to 0.55-0.65. Your job is honest analysis, not encouragement. Low scores protect users from wasting time on doomed ideas.`;
+Be specific, not generic. Reference actual findings from the research. Calibrate the confidence score carefully — most ideas should score 0.4-0.7.`;
 
 export async function generateSWOT(
   ideaAnalysis: any,

@@ -741,9 +741,9 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
           <Text style={styles.actionButtonText}>{loading ? 'PROCESSING...' : 'IDEATE'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.testButton, (surveillanceLoading || loading) && styles.actionButtonDisabled]}
+          style={[styles.testButton, surveillanceLoading && styles.actionButtonDisabled]}
           onPress={handleRunSurveillance}
-          disabled={surveillanceLoading || loading}
+          disabled={surveillanceLoading}
         >
           <Text style={styles.testButtonText}>{surveillanceLoading ? 'SWEEPING...' : 'RUN SURVEILLANCE'}</Text>
         </TouchableOpacity>
