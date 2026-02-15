@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { NavigationProp } from '@react-navigation/native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { NavigationProp, RouteProp, useRoute } from '@react-navigation/native';
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
@@ -10,6 +10,7 @@ interface SignInProps {
 }
 
 export default function SignIn({ navigation }: SignInProps) {
+  const route = useRoute<RouteProp<{ SignIn: { mode?: 'signIn' | 'register' } }, 'SignIn'>>();
   const gradientId = useMemo(() => `stripFade-signin-${Math.random().toString(36).substr(2, 9)}`, []);
   const { login, register, confirmRegistration } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,7 @@ export default function SignIn({ navigation }: SignInProps) {
   const [password, setPassword] = useState('');
   const [confirmCode, setConfirmCode] = useState('');
 
-  const [mode, setMode] = useState<'signIn' | 'register' | 'confirmCode'>('signIn');
+  const [mode, setMode] = useState<'signIn' | 'register' | 'confirmCode'>(route.params?.mode || 'signIn');
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
@@ -106,6 +107,7 @@ export default function SignIn({ navigation }: SignInProps) {
       </View>
 
       <View style={styles.contentContainer}>
+        <Image source={require('../assets/spyglass.png')} style={styles.spyglassImage} resizeMode="contain" />
         <Text style={styles.title}>
           {mode === 'signIn' ? 'Sign In' :
            mode === 'register' ? 'Create Account' :
@@ -218,6 +220,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  spyglassImage: {
+    width: 150,
+    height: 150,
+    marginBottom: 20,
   },
   title: {
     fontFamily: 'PetitFormalScript_400Regular',
