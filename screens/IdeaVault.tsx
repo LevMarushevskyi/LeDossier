@@ -1,11 +1,45 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { NavigationProp } from '@react-navigation/native';
 
-interface Idea {
-  name: string;
-  description: string;
-  id: number;
+const API_URL = 'https://dhqrasy77i.execute-api.us-east-1.amazonaws.com/prod';
+
+interface Dossier {
+  ideaId: string;
+  title: string;
+  rawInput: string;
+  status: string;
+  createdAt: string;
+  analysis: {
+    enrichedDescription: string;
+    domain: string;
+    targetMarket: string;
+    tags: string[];
+    searchQueries: string[];
+    keyAssumptions: string[];
+  };
+  research: {
+    sources: Array<{
+      title: string;
+      url: string;
+      date: string;
+      category: string;
+      summary: string;
+      relevanceScore: number;
+    }>;
+    landscapeSummary: string;
+  };
+  swot: {
+    swot: {
+      strengths: string[];
+      weaknesses: string[];
+      opportunities: string[];
+      threats: string[];
+    };
+    confidenceScore: number;
+    confidenceRationale: string;
+    recommendedNextStep: string;
+  };
 }
 
 interface IdeaVaultProps {
@@ -18,22 +52,56 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [dossiers, setDossiers] = useState<Dossier[]>([]);
+  const [activeDossier, setActiveDossier] = useState<Dossier | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!name.trim() || !description.trim()) {
       setShowAlert(true);
       return;
     }
-    const newIdea = { name, description, id: Date.now() };
-    setIdeas([...ideas, newIdea]);
-    console.log('Name:', name);
-    console.log('Description:', description);
-    console.log('Stored idea:', newIdea);
-    console.log('All ideas:', [...ideas, newIdea]);
+
     setShowPanel(false);
-    setName('');
-    setDescription('');
+    setLoading(true);
+    setErrorMsg(null);
+    setLoadingMessage('Analyzing your idea...');
+
+    const timer = setTimeout(() => {
+      setLoadingMessage('Researching market landscape...');
+    }, 10000);
+    const timer2 = setTimeout(() => {
+      setLoadingMessage('Generating SWOT analysis...');
+    }, 20000);
+
+    try {
+      const response = await fetch(`${API_URL}/ideas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), description: description.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to analyze idea');
+      }
+
+      setDossiers(prev => [data, ...prev]);
+      setActiveDossier(data);
+      setName('');
+      setDescription('');
+    } catch (err: any) {
+      console.error('Pipeline error:', err);
+      setErrorMsg(err.message || 'Something went wrong');
+    } finally {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+      setLoading(false);
+      setLoadingMessage('');
+    }
   };
 
   const handleDeleteClick = () => {
@@ -75,12 +143,121 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
     }
   };
 
+  const renderDossierContent = () => {
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0C001A" />
+          <Text style={styles.loadingText}>{loadingMessage}</Text>
+          <Text style={styles.loadingSubtext}>This takes about 30 seconds</Text>
+        </View>
+      );
+    }
+
+    if (errorMsg) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Analysis Failed</Text>
+          <Text style={styles.errorText}>{errorMsg}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => setErrorMsg(null)}>
+            <Text style={styles.retryButtonText}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (activeDossier) {
+      const s = activeDossier.swot.swot ?? activeDossier.swot;
+      return (
+        <ScrollView style={styles.dossierScroll} showsVerticalScrollIndicator={false}>
+          <Text style={styles.dossierTitle}>{activeDossier.title}</Text>
+          <Text style={styles.dossierDomain}>{activeDossier.analysis.domain}</Text>
+
+          <View style={styles.tagsRow}>
+            {activeDossier.analysis.tags.map((tag, i) => (
+              <View key={i} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.confidenceBadge}>
+            <Text style={styles.confidenceLabel}>Confidence</Text>
+            <Text style={styles.confidenceScore}>
+              {Math.round((activeDossier.swot.confidenceScore ?? 0) * 100)}%
+            </Text>
+          </View>
+
+          <Text style={styles.sectionHeader}>Analysis</Text>
+          <Text style={styles.sectionBody}>{activeDossier.analysis.enrichedDescription}</Text>
+
+          <Text style={styles.sectionHeader}>Strengths</Text>
+          {(s.strengths ?? []).map((item: string, i: number) => (
+            <Text key={i} style={styles.bulletItem}>• {item}</Text>
+          ))}
+
+          <Text style={styles.sectionHeader}>Weaknesses</Text>
+          {(s.weaknesses ?? []).map((item: string, i: number) => (
+            <Text key={i} style={styles.bulletItem}>• {item}</Text>
+          ))}
+
+          <Text style={styles.sectionHeader}>Opportunities</Text>
+          {(s.opportunities ?? []).map((item: string, i: number) => (
+            <Text key={i} style={styles.bulletItem}>• {item}</Text>
+          ))}
+
+          <Text style={styles.sectionHeader}>Threats</Text>
+          {(s.threats ?? []).map((item: string, i: number) => (
+            <Text key={i} style={styles.bulletItem}>• {item}</Text>
+          ))}
+
+          <Text style={styles.sectionHeader}>Research Sources</Text>
+          {activeDossier.research.sources.slice(0, 5).map((src, i) => (
+            <View key={i} style={styles.sourceItem}>
+              <Text style={styles.sourceTitle}>{src.title}</Text>
+              <Text style={styles.sourceCategory}>{src.category} — relevance: {Math.round(src.relevanceScore * 100)}%</Text>
+              <Text style={styles.sourceSummary}>{src.summary}</Text>
+            </View>
+          ))}
+
+          <Text style={styles.sectionHeader}>Recommended Next Step</Text>
+          <Text style={styles.sectionBody}>{activeDossier.swot.recommendedNextStep}</Text>
+
+          <View style={{ height: 20 }} />
+        </ScrollView>
+      );
+    }
+
+    if (dossiers.length > 0) {
+      return (
+        <ScrollView style={styles.dossierScroll} showsVerticalScrollIndicator={false}>
+          {dossiers.map((d, i) => (
+            <TouchableOpacity key={i} style={styles.ideaCard} onPress={() => setActiveDossier(d)}>
+              <Text style={styles.ideaCardTitle}>{d.title}</Text>
+              <Text style={styles.ideaCardDomain}>{d.analysis.domain}</Text>
+              <Text style={styles.ideaCardScore}>
+                Confidence: {Math.round((d.swot.confidenceScore ?? 0) * 100)}%
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      );
+    }
+
+    return <Text style={styles.boxText}>Your ideas will appear here</Text>;
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Notification')}>
           <Text style={styles.navButtonText}>Notifications</Text>
         </TouchableOpacity>
+        {activeDossier && (
+          <TouchableOpacity style={styles.navButton} onPress={() => setActiveDossier(null)}>
+            <Text style={styles.navButtonText}>All Ideas</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutButtonText}>Sign Out</Text>
         </TouchableOpacity>
@@ -89,13 +266,17 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
       <View style={styles.mainContent}>
         <Text style={styles.pageTitle}>Idea Vault</Text>
         <View style={styles.contentBox}>
-          <Text style={styles.boxText}>Your ideas will appear here</Text>
+          {renderDossierContent()}
         </View>
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => setShowPanel(true)}>
-          <Text style={styles.actionButtonText}>IDEATE</Text>
+        <TouchableOpacity
+          style={[styles.actionButton, loading && styles.actionButtonDisabled]}
+          onPress={() => setShowPanel(true)}
+          disabled={loading}
+        >
+          <Text style={styles.actionButtonText}>{loading ? 'PROCESSING...' : 'IDEATE'}</Text>
         </TouchableOpacity>
       </View>
       <Modal visible={showPanel} transparent animationType="fade">
@@ -347,5 +528,169 @@ const styles = StyleSheet.create({
   alertButtonText: {
     color: '#FFFDEE',
     fontWeight: 'bold',
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#0C001A',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 15,
+  },
+  loadingSubtext: {
+    color: '#0C001A',
+    fontSize: 12,
+    marginTop: 5,
+    opacity: 0.6,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorTitle: {
+    color: '#cc0000',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  errorText: {
+    color: '#0C001A',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  retryButton: {
+    backgroundColor: '#0C001A',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  retryButtonText: {
+    color: '#FFFDEE',
+    fontWeight: 'bold',
+  },
+  dossierScroll: {
+    flex: 1,
+    width: '100%',
+  },
+  dossierTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#0C001A',
+    marginBottom: 4,
+  },
+  dossierDomain: {
+    fontSize: 14,
+    color: '#0C001A',
+    opacity: 0.6,
+    marginBottom: 10,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  tag: {
+    backgroundColor: '#0C001A',
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  tagText: {
+    color: '#FFFDEE',
+    fontSize: 11,
+  },
+  confidenceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+    backgroundColor: '#0C001A',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  confidenceLabel: {
+    color: '#FFFDEE',
+    fontSize: 12,
+  },
+  confidenceScore: {
+    color: '#FFFDEE',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0C001A',
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  sectionBody: {
+    fontSize: 13,
+    color: '#0C001A',
+    lineHeight: 20,
+  },
+  bulletItem: {
+    fontSize: 13,
+    color: '#0C001A',
+    lineHeight: 20,
+    marginBottom: 4,
+    paddingLeft: 4,
+  },
+  sourceItem: {
+    backgroundColor: 'rgba(12, 0, 26, 0.05)',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 8,
+  },
+  sourceTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#0C001A',
+  },
+  sourceCategory: {
+    fontSize: 11,
+    color: '#0C001A',
+    opacity: 0.5,
+    marginBottom: 4,
+  },
+  sourceSummary: {
+    fontSize: 12,
+    color: '#0C001A',
+    lineHeight: 18,
+  },
+  ideaCard: {
+    backgroundColor: 'rgba(12, 0, 26, 0.05)',
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 10,
+  },
+  ideaCardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0C001A',
+  },
+  ideaCardDomain: {
+    fontSize: 12,
+    color: '#0C001A',
+    opacity: 0.6,
+    marginTop: 2,
+  },
+  ideaCardScore: {
+    fontSize: 12,
+    color: '#0C001A',
+    marginTop: 4,
+    fontWeight: '600',
   },
 });
