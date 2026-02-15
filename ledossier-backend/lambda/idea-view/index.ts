@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { getUserFromEvent } from "../shared/auth";
 import { success, error } from "../shared/responses";
 
@@ -17,6 +17,21 @@ export async function handler(event: any) {
     const ideaId = event.pathParameters?.ideaId;
     if (!ideaId) {
       return error("Missing ideaId in path", 400);
+    }
+
+    if (event.httpMethod === "DELETE") {
+      try {
+        await ddb.send(
+          new DeleteCommand({
+            TableName: IDEAS_TABLE,
+            Key: { userId: user.userId, ideaId },
+          })
+        );
+      } catch (err) {
+        console.error("Delete error:", err);
+      }
+
+      return success({ message: "Idea deleted" });
     }
 
     // 3. Fetch idea from DynamoDB
