@@ -59,8 +59,8 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const [showPanel, setShowPanel] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState('');
+  const [rawInput, setRawInput] = useState('');
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
   const [ideas, setIdeas] = useState<Dossier[]>([]);
   const [activeDossier, setActiveDossier] = useState<Dossier | null>(null);
@@ -97,7 +97,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   };
 
   const handleConfirm = async () => {
-    if (!name.trim() || !description.trim()) {
+    if (!title.trim() || !rawInput.trim()) {
       setShowAlert(true);
       return;
     }
@@ -128,7 +128,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ title: name.trim(), rawInput: description.trim() }),
+        body: JSON.stringify({ title: title.trim(), rawInput: rawInput.trim() }),
       });
 
       const data = await response.json();
@@ -148,8 +148,8 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
       setDossiers(prev => [dossierWithPosition, ...prev]);
       setIdeas(prev => [dossierWithPosition, ...prev]);
       setActiveDossier(dossierWithPosition);
-      setName('');
-      setDescription('');
+      setTitle('');
+      setRawInput('');
     } catch (err: any) {
       console.error('Pipeline error:', err);
       setErrorMsg(err.message || 'Something went wrong');
@@ -168,8 +168,8 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const handleDeleteConfirm = () => {
     setShowDeleteConfirm(false);
     setShowPanel(false);
-    setName('');
-    setDescription('');
+    setTitle('');
+    setRawInput('');
   };
 
   const handleDeleteCancel = () => {
@@ -473,14 +473,14 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
             <TextInput
               style={styles.input}
               placeholder="Name"
-              value={name}
-              onChangeText={setName}
+              value={title}
+              onChangeText={setTitle}
             />
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Description"
-              value={description}
-              onChangeText={setDescription}
+              value={rawInput}
+              onChangeText={setRawInput}
               multiline
             />
             <View style={styles.buttonRow}>

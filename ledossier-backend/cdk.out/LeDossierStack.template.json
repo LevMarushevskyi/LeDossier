@@ -67,7 +67,17 @@
   "DossierBucket461F6066": {
    "Type": "AWS::S3::Bucket",
    "Properties": {
-    "BucketName": "ledossier-dossiers-129751814064",
+    "BucketName": {
+     "Fn::Join": [
+      "",
+      [
+       "ledossier-dossiers-",
+       {
+        "Ref": "AWS::AccountId"
+       }
+      ]
+     ]
+    },
     "Tags": [
      {
       "Key": "aws-cdk:auto-delete-objects",
@@ -187,7 +197,9 @@
    "Type": "AWS::Lambda::Function",
    "Properties": {
     "Code": {
-     "S3Bucket": "cdk-hnb659fds-assets-129751814064-us-east-1",
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+     },
      "S3Key": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip"
     },
     "Timeout": 900,
@@ -393,8 +405,10 @@
    "Type": "AWS::Lambda::Function",
    "Properties": {
     "Code": {
-     "S3Bucket": "cdk-hnb659fds-assets-129751814064-us-east-1",
-     "S3Key": "8d89fe8b1fe88edb363a5b9e9589667658c129e5f40c0a73a41dfbccad45dd77.zip"
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+     },
+     "S3Key": "3ffdc8617bec0081f35e00415d506f3ed12518e90e237df8f263b6b725c3cc4f.zip"
     },
     "Environment": {
      "Variables": {
@@ -429,7 +443,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "LeDossierStack/IdeaIntakeFn/Resource",
-    "aws:asset:path": "C:\\Users\\steel\\Documents\\College\\Hackathons\\LeDossier\\ledossier-backend",
+    "aws:asset:path": "asset.3ffdc8617bec0081f35e00415d506f3ed12518e90e237df8f263b6b725c3cc4f",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -661,7 +675,11 @@
        {
         "Ref": "AWS::Partition"
        },
-       ":execute-api:us-east-1:129751814064:",
+       ":execute-api:us-east-1:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
        {
         "Ref": "LeDossierApiC4005682"
        },
@@ -697,7 +715,11 @@
        {
         "Ref": "AWS::Partition"
        },
-       ":execute-api:us-east-1:129751814064:",
+       ":execute-api:us-east-1:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
        {
         "Ref": "LeDossierApiC4005682"
        },
@@ -766,7 +788,11 @@
         {
          "Ref": "AWS::Partition"
         },
-        ":cognito-idp:us-east-1:129751814064:userpool/us-east-1_XSZEJwbSO"
+        ":cognito-idp:us-east-1:",
+        {
+         "Ref": "AWS::AccountId"
+        },
+        ":userpool/us-east-1_XSZEJwbSO"
        ]
       ]
      }

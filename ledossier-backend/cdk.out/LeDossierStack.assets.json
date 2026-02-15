@@ -8,41 +8,41 @@
         "packaging": "zip"
       },
       "destinations": {
-        "129751814064-us-east-1-f866bf98": {
-          "bucketName": "cdk-hnb659fds-assets-129751814064-us-east-1",
+        "current_account-us-east-1-e650c2de": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1",
           "objectKey": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip",
           "region": "us-east-1",
-          "assumeRoleArn": "arn:${AWS::Partition}:iam::129751814064:role/cdk-hnb659fds-file-publishing-role-129751814064-us-east-1"
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-us-east-1"
         }
       }
     },
-    "8d89fe8b1fe88edb363a5b9e9589667658c129e5f40c0a73a41dfbccad45dd77": {
+    "3ffdc8617bec0081f35e00415d506f3ed12518e90e237df8f263b6b725c3cc4f": {
       "displayName": "IdeaIntakeFn/Code",
       "source": {
-        "path": "C:\\Users\\steel\\Documents\\College\\Hackathons\\LeDossier\\ledossier-backend",
+        "path": "asset.3ffdc8617bec0081f35e00415d506f3ed12518e90e237df8f263b6b725c3cc4f",
         "packaging": "zip"
       },
       "destinations": {
-        "129751814064-us-east-1-5cbcf003": {
-          "bucketName": "cdk-hnb659fds-assets-129751814064-us-east-1",
-          "objectKey": "8d89fe8b1fe88edb363a5b9e9589667658c129e5f40c0a73a41dfbccad45dd77.zip",
+        "current_account-us-east-1-3841a8ca": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1",
+          "objectKey": "3ffdc8617bec0081f35e00415d506f3ed12518e90e237df8f263b6b725c3cc4f.zip",
           "region": "us-east-1",
-          "assumeRoleArn": "arn:${AWS::Partition}:iam::129751814064:role/cdk-hnb659fds-file-publishing-role-129751814064-us-east-1"
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-us-east-1"
         }
       }
     },
-    "1112b58955037e32d9a0066e9bb014b25744cb4043c2963c03aff567f5d30476": {
+    "fa199a8f7afe9b3bbd14f8d478be8882501d9adabba863325a895f9dd1479d49": {
       "displayName": "LeDossierStack Template",
       "source": {
         "path": "LeDossierStack.template.json",
         "packaging": "file"
       },
       "destinations": {
-        "129751814064-us-east-1-b954f0f5": {
-          "bucketName": "cdk-hnb659fds-assets-129751814064-us-east-1",
-          "objectKey": "1112b58955037e32d9a0066e9bb014b25744cb4043c2963c03aff567f5d30476.json",
+        "current_account-us-east-1-f79cf125": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1",
+          "objectKey": "fa199a8f7afe9b3bbd14f8d478be8882501d9adabba863325a895f9dd1479d49.json",
           "region": "us-east-1",
-          "assumeRoleArn": "arn:${AWS::Partition}:iam::129751814064:role/cdk-hnb659fds-file-publishing-role-129751814064-us-east-1"
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-us-east-1"
         }
       }
     }
