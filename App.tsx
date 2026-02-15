@@ -1,8 +1,15 @@
+import { Amplify } from 'aws-amplify';
+import amplifyConfig from './amplify-config';
+
+Amplify.configure(amplifyConfig);
+
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Home from './screens/Home';
 import SignIn from './screens/SignIn';
 import IdeaVault from './screens/IdeaVault';
+import Notification from './screens/Notification';
+import { AuthProvider } from './contexts/AuthContext';
 import { useFonts, PetitFormalScript_400Regular } from '@expo-google-fonts/petit-formal-script';
 import { NotoSerif_400Regular } from '@expo-google-fonts/noto-serif';
 import { View, ActivityIndicator, Animated, Easing } from 'react-native';
@@ -111,6 +118,7 @@ export default function App() {
 
   return (
     <>
+    <AuthProvider>
       <NavigationContainer onStateChange={handleNavigationStateChange}>
         <Stack.Navigator
           screenOptions={{
@@ -128,8 +136,10 @@ export default function App() {
           <Stack.Screen name="Home" component={Home} />
           <Stack.Screen name="SignIn" component={SignIn} />
           <Stack.Screen name="IdeaVault" component={IdeaVault} />
+          <Stack.Screen name="Notification" component={Notification} />
         </Stack.Navigator>
       </NavigationContainer>
+      </AuthProvider>
       <DoorTransition isActive={showTransition} />
     </>
   );

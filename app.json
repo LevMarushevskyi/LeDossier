@@ -31,8 +31,7 @@
       "favicon": "./assets/door.png"
     },
     "plugins": [
-      "expo-font",
-      "expo-web-browser"
+      "expo-font"
     ]
   }
 }

@@ -5,6 +5,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda-nodejs";
 import * as lambdaRuntime from "aws-cdk-lib/aws-lambda";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as cognito from "aws-cdk-lib/aws-cognito";
 import { Construct } from "constructs";
 import * as path from "path";
 
@@ -53,6 +54,8 @@ export class LeDossierStack extends cdk.Stack {
         UPDATES_TABLE: updatesTable.tableName,
         DOSSIER_BUCKET: dossierBucket.bucketName,
         GEMINI_API_KEY: geminiApiKey,
+        USER_POOL_ID: "us-east-1_XSZEJwbSO",
+        USER_POOL_CLIENT_ID: "1n389pqmf8khutobtkj23rpd8n",
       },
       bundling: {
         externalModules: [],
@@ -94,10 +97,28 @@ export class LeDossierStack extends cdk.Stack {
       },
     });
 
+    // --- Cognito Authorizer ---
+
+    const userPool = cognito.UserPool.fromUserPoolId(
+      this,
+      "ExistingUserPool",
+      "us-east-1_XSZEJwbSO"
+    );
+
+    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(
+      this,
+      "CognitoAuthorizer",
+      { cognitoUserPools: [userPool] }
+    );
+
     const ideasResource = api.root.addResource("ideas");
     ideasResource.addMethod(
       "POST",
-      new apigateway.LambdaIntegration(ideaIntakeFn)
+      new apigateway.LambdaIntegration(ideaIntakeFn),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      }
     );
 
     // --- Outputs ---

@@ -1,167 +1,167 @@
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { NavigationProp } from '@react-navigation/native';
-import { useState, useEffect } from 'react';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
+import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import BackgroundNoise from '../components/BackgroundNoise';
 
 interface SignInProps {
   navigation: NavigationProp<any>;
 }
 
-WebBrowser.maybeCompleteAuthSession();
-
 export default function SignIn({ navigation }: SignInProps) {
+  const { login, register, confirmRegistration } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const FLASK_URL = 'http://localhost:5000'; // Update this to your Flask server URL
-  const isWeb = Platform.OS === 'web';
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmCode, setConfirmCode] = useState('');
 
-  useEffect(() => {
-    // MOBILE: Listen for deep link callbacks
-    if (!isWeb) {
-      const subscription = Linking.addEventListener('url', handleDeepLink);
+  const [mode, setMode] = useState<'signIn' | 'register' | 'confirmCode'>('signIn');
 
-      // Check if app was opened via deep link
-      Linking.getInitialURL().then((url) => {
-        if (url) {
-          handleDeepLink({ url });
-        }
-      });
-
-      return () => {
-        subscription.remove();
-      };
+  const handleSignIn = async () => {
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both email and password');
+      return;
     }
-
-    // WEB: Listen for postMessage from auth window
-    if (isWeb) {
-      const handleMessage = (event: MessageEvent) => {
-        console.log('Message received:', event.data);
-
-        if (event.data.type === 'LEDOSSIER_AUTH_SUCCESS') {
-          const { email, success } = event.data.data;
-          if (success) {
-            console.log('Web authentication successful for:', email);
-            setLoading(false);
-            navigation.navigate('IdeaVault');
-          }
-        }
-      };
-
-      window.addEventListener('message', handleMessage);
-
-      // Also poll localStorage for auth data (backup method)
-      const pollInterval = setInterval(() => {
-        try {
-          const authDataStr = localStorage.getItem('ledossier_auth');
-          if (authDataStr) {
-            const authData = JSON.parse(authDataStr);
-            if (authData.success) {
-              console.log('Web authentication successful (localStorage):', authData.email);
-              localStorage.removeItem('ledossier_auth'); // Clean up
-              clearInterval(pollInterval);
-              setLoading(false);
-              navigation.navigate('IdeaVault');
-            }
-          }
-        } catch (e) {
-          console.error('Error checking localStorage:', e);
-        }
-      }, 1000); // Check every second
-
-      return () => {
-        window.removeEventListener('message', handleMessage);
-        clearInterval(pollInterval);
-      };
-    }
-  }, [isWeb, navigation]);
-
-  const handleDeepLink = ({ url }: { url: string }) => {
-    console.log('Deep link received:', url);
-
-    // Parse the URL to extract parameters
-    const { queryParams } = Linking.parse(url);
-
-    if (queryParams?.success === 'true') {
-      const email = queryParams.email as string;
-      console.log('Authentication successful for:', email);
-      setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+      await login(email.trim(), password);
       navigation.navigate('IdeaVault');
-    } else {
-      setError('Authentication failed');
+    } catch (err: any) {
+      setError(err.message || 'Sign in failed');
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleSignIn = async () => {
+  const handleRegister = async () => {
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both email and password');
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
-
-      if (isWeb) {
-        // WEB: Open auth in new window and wait for postMessage/localStorage
-        const authWindow = window.open(
-          `${FLASK_URL}/login`,
-          'ledossier-auth',
-          'width=500,height=600'
-        );
-
-        if (!authWindow) {
-          setError('Popup blocked. Please allow popups for this site.');
-          setLoading(false);
-          return;
-        }
-
-        // The message listener in useEffect will handle the response
-        console.log('Opened authentication window for web');
-      } else {
-        // MOBILE: Open auth session with deep link
-        const result = await WebBrowser.openAuthSessionAsync(
-          `${FLASK_URL}/login`,
-          'ledossier://auth'
-        );
-
-        setLoading(false);
-
-        if (result.type === 'success') {
-          // Authentication successful - deep link handler will navigate
-          console.log('Auth success:', result);
-        } else if (result.type === 'cancel') {
-          console.log('User cancelled authentication');
-          setError('Authentication cancelled');
-        }
+      const result = await register(email.trim(), password);
+      if (!result.isSignUpComplete) {
+        setMode('confirmCode');
       }
-    } catch (error) {
-      console.error('Authentication error:', error);
-      setError('Authentication error occurred');
+    } catch (err: any) {
+      setError(err.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmCode = async () => {
+    if (!confirmCode.trim()) {
+      setError('Please enter the verification code');
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      await confirmRegistration(email.trim(), confirmCode.trim());
+      // Auto sign in after confirmation
+      await login(email.trim(), password);
+      navigation.navigate('IdeaVault');
+    } catch (err: any) {
+      setError(err.message || 'Confirmation failed');
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <BackgroundNoise baseColor="#0C001A" opacity={0.2} />
 
       <View style={styles.contentContainer}>
-        <Text style={styles.title}>Welcome to Le Dossier</Text>
-        <Text style={styles.subtitle}>Sign in to access your ideas</Text>
+        <Text style={styles.title}>Le Dossier</Text>
+        <Text style={styles.subtitle}>
+          {mode === 'signIn' ? 'Sign in to access your ideas' :
+           mode === 'register' ? 'Create your account' :
+           'Check your email for a verification code'}
+        </Text>
 
-        <TouchableOpacity
-          style={styles.signInButton}
-          onPress={handleSignIn}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#0C001A" />
-          ) : (
-            <Text style={styles.signInButtonText}>SIGN IN WITH COGNITO</Text>
-          )}
-        </TouchableOpacity>
+        {mode !== 'confirmCode' ? (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="rgba(255, 253, 238, 0.4)"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              editable={!loading}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="rgba(255, 253, 238, 0.4)"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!loading}
+            />
 
-        {loading && (
-          <Text style={styles.loadingText}>Opening browser for authentication...</Text>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={mode === 'signIn' ? handleSignIn : handleRegister}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#0C001A" />
+              ) : (
+                <Text style={styles.primaryButtonText}>
+                  {mode === 'signIn' ? 'SIGN IN' : 'CREATE ACCOUNT'}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.switchButton}
+              onPress={() => {
+                setMode(mode === 'signIn' ? 'register' : 'signIn');
+                setError(null);
+              }}
+              disabled={loading}
+            >
+              <Text style={styles.switchButtonText}>
+                {mode === 'signIn' ? 'Need an account? Create one' : 'Already have an account? Sign in'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Verification Code"
+              placeholderTextColor="rgba(255, 253, 238, 0.4)"
+              value={confirmCode}
+              onChangeText={setConfirmCode}
+              keyboardType="number-pad"
+              editable={!loading}
+            />
+
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={handleConfirmCode}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#0C001A" />
+              ) : (
+                <Text style={styles.primaryButtonText}>VERIFY</Text>
+              )}
+            </TouchableOpacity>
+          </>
         )}
 
         {error && (
@@ -175,7 +175,7 @@ export default function SignIn({ navigation }: SignInProps) {
           <Text style={styles.backButtonText}>Back to Home</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -201,19 +201,32 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSerif_400Regular',
     fontSize: 16,
     color: '#FFFDEE',
-    marginBottom: 50,
+    marginBottom: 40,
     textAlign: 'center',
   },
-  signInButton: {
+  input: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: 'rgba(255, 253, 238, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 253, 238, 0.3)',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    color: '#FFFDEE',
+    fontSize: 16,
+    fontFamily: 'NotoSerif_400Regular',
+  },
+  primaryButton: {
     backgroundColor: '#FFFDEE',
-    paddingVertical: 20,
+    paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 10,
-    marginBottom: 20,
+    marginTop: 10,
     minWidth: 250,
     alignItems: 'center',
   },
-  signInButtonText: {
+  primaryButtonText: {
     fontFamily: 'NotoSerif_400Regular',
     fontSize: 18,
     fontWeight: 'bold',
@@ -223,15 +236,16 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 14,
-    marginTop: 10,
-    fontStyle: 'italic',
+    textDecorationLine: 'underline',
   },
   errorText: {
     fontFamily: 'NotoSerif_400Regular',
     color: '#ff6b6b',
     fontSize: 14,
-    marginTop: 10,
+    marginTop: 15,
     fontWeight: 'bold',
+    textAlign: 'center',
+    maxWidth: 320,
   },
   backButton: {
     paddingVertical: 10,
