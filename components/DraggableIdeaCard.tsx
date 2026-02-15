@@ -16,7 +16,6 @@ interface Dossier {
   analysis?: any;
   research?: any;
   swot?: any;
-  latestReport?: any;
   x: number;
   y: number;
 }
@@ -112,9 +111,6 @@ function DraggableIdeaCard({
         <Text style={styles.cardTitle} numberOfLines={4}>
           {idea.title}
         </Text>
-        {idea.latestReport && (
-          <View style={styles.reportDot} />
-        )}
       </Animated.View>
     </GestureDetector>
   );
@@ -149,18 +145,8 @@ const styles = StyleSheet.create({
     color: '#FFFDEE',
     opacity: 0.7,
   },
-  reportDot: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4CAF50',
-  },
 });
 
 export default React.memo(DraggableIdeaCard, (prev, next) => {
-  return prev.idea.ideaId === next.idea.ideaId
-    && prev.idea.latestReport?.generatedAt === next.idea.latestReport?.generatedAt;
+  return prev.idea.ideaId === next.idea.ideaId;
 });
