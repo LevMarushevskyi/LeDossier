@@ -371,3 +371,51 @@ BUG FIXES & CHANGES
   - Fixed textDecoration style error (changed to textDecorationLine)
   - Custom URL schemes (ledossier://) work on mobile but not web browsers
   - Web authentication uses window.open popup with cross-window messaging
+
+[2026-02-14 22:10] Updated IdeaVault page navigation
+  - Removed "Back to Home" button from footer
+  - Added "Sign Out" button to header (next to Notifications button)
+  - Sign out navigates user back to Home page (requires re-authentication)
+  - Door transition animation works for all page navigations including Notification ↔ IdeaVault
+
+[2026-02-14 22:15] Fixed page transitions and added delete confirmation
+  - Fixed door transition animation not triggering between pages
+  - Changed from navigation listener to onStateChange callback in NavigationContainer
+  - Added console.log statements for debugging transition triggers
+  - Transition now properly shows for all page navigations
+  - Added "Are you sure?" confirmation dialog when clicking Delete in ideate panel
+  - Delete confirmation shows modal with "Yes, Delete" and "Cancel" buttons
+  - Only clears form data after user confirms deletion
+  - Prevents accidental loss of idea text
+
+[2026-02-14 22:20] Implemented proper sign out functionality
+  - Sign out button now calls Flask /logout endpoint to clear server session
+  - Added handleSignOut function in IdeaVault.tsx
+  - Calls fetch to http://localhost:5000/logout with credentials included
+  - Clears localStorage auth data on web platform
+  - Properly logs out user from both client and server
+  - Navigates to Home after successful logout
+  - Includes error handling - navigates to Home even if logout call fails
+
+[2026-02-14 22:25] Added CORS support to Flask for proper session handling
+  - Installed flask-cors package (version 6.0.2)
+  - Added CORS configuration to Flask app
+  - Enabled credentials support for cross-origin requests
+  - Allowed origins: http://localhost:8081 and http://localhost:19006 (Expo dev servers)
+  - Configured session cookies for cross-origin usage:
+    - SESSION_COOKIE_SAMESITE = 'None' (allows cross-origin cookies)
+    - SESSION_COOKIE_SECURE = False (for localhost development)
+    - SESSION_COOKIE_HTTPONLY = True (security best practice)
+  - Fixes issue where Flask session wasn't being cleared on logout
+  - Session cookies now properly sent/received between React Native app and Flask
+
+[2026-02-14 22:30] Fixed OAuth state mismatch error
+  - Changed Flask secret key from random (os.urandom) to fixed value
+  - OAuth state validation requires consistent session encryption across requests
+  - Previous random key was regenerated on each server restart, breaking OAuth flow
+  - Now uses fixed key for development: 'dev-secret-key-change-in-production-abc123'
+  - Supports environment variable FLASK_SECRET_KEY for production deployment
+  - Changed SESSION_COOKIE_SAMESITE from 'None' to 'Lax' for localhost
+  - SameSite='None' requires HTTPS (Secure=True), incompatible with localhost HTTP
+  - SameSite='Lax' works with HTTP and allows OAuth redirects
+  - Fixes MismatchingStateError: "CSRF Warning! State not equal in request and response"

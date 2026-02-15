@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Platform } from 'react-native';
 import { useState } from 'react';
 import { NavigationProp } from '@react-navigation/native';
 
@@ -15,6 +15,7 @@ interface IdeaVaultProps {
 export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const [showPanel, setShowPanel] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -35,10 +36,43 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
     setDescription('');
   };
 
-  const handleDelete = () => {
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    setShowDeleteConfirm(false);
     setShowPanel(false);
     setName('');
     setDescription('');
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      const FLASK_URL = 'http://localhost:5000';
+
+      // Call Flask logout endpoint to clear server session
+      await fetch(`${FLASK_URL}/logout`, {
+        method: 'GET',
+        credentials: 'include', // Include cookies for session management
+      });
+
+      // Clear client-side auth data for web platform
+      if (Platform.OS === 'web') {
+        localStorage.removeItem('ledossier_auth');
+      }
+
+      // Navigate back to home
+      navigation.navigate('Home');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Navigate to home anyway even if logout call fails
+      navigation.navigate('Home');
+    }
   };
 
   return (
@@ -46,6 +80,9 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
       <View style={styles.header}>
         <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Notification')}>
           <Text style={styles.navButtonText}>Notifications</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutButtonText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
 
@@ -59,9 +96,6 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
       <View style={styles.footer}>
         <TouchableOpacity style={styles.actionButton} onPress={() => setShowPanel(true)}>
           <Text style={styles.actionButtonText}>IDEATE</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Home')}>
-          <Text style={styles.backButtonText}>Back to Home</Text>
         </TouchableOpacity>
       </View>
       <Modal visible={showPanel} transparent animationType="fade">
@@ -85,7 +119,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
               <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
                 <Text style={styles.confirmButtonText}>Confirm</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+              <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteClick}>
                 <Text style={styles.deleteButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
@@ -100,6 +134,22 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
             <TouchableOpacity style={styles.alertButton} onPress={() => setShowAlert(false)}>
               <Text style={styles.alertButtonText}>OK</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={showDeleteConfirm} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.alertPanel}>
+            <Text style={styles.alertTitle}>Are you sure?</Text>
+            <Text style={styles.alertMessage}>This will discard your current idea.</Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.confirmButton} onPress={handleDeleteConfirm}>
+                <Text style={styles.confirmButtonText}>Yes, Delete</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteCancel}>
+                <Text style={styles.deleteButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -125,6 +175,17 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   navButtonText: {
+    color: '#0C001A',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  signOutButton: {
+    backgroundColor: '#FFFDEE',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  signOutButtonText: {
     color: '#0C001A',
     fontSize: 14,
     fontWeight: 'bold',

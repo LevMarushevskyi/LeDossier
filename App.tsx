@@ -92,18 +92,15 @@ export default function App() {
   });
 
   const [showTransition, setShowTransition] = useState(false);
-  const navigationRef = useRef<any>(null);
 
-  useEffect(() => {
-    if (!navigationRef.current) return;
-
-    const unsubscribe = navigationRef.current.addListener('state', () => {
-      setShowTransition(true);
-      setTimeout(() => setShowTransition(false), 800);
-    });
-
-    return unsubscribe;
-  }, []);
+  const handleNavigationStateChange = () => {
+    console.log('Navigation state changed - triggering transition');
+    setShowTransition(true);
+    setTimeout(() => {
+      console.log('Hiding transition');
+      setShowTransition(false);
+    }, 800);
+  };
 
   if (!fontsLoaded) {
     return (
@@ -115,7 +112,7 @@ export default function App() {
 
   return (
     <>
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer onStateChange={handleNavigationStateChange}>
         <Stack.Navigator
           screenOptions={{
             headerShown: false,

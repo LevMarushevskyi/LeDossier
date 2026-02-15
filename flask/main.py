@@ -1,9 +1,23 @@
 from flask import Flask, redirect, url_for, session
+from flask_cors import CORS
 from authlib.integrations.flask_client import OAuth
 import os
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)  # Use a secure random key in production
+# Use a fixed secret key for development (OAuth state needs consistent session)
+# In production, use a secure random key from environment variable
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production-abc123')
+
+# Configure session cookies for localhost development
+# SameSite='Lax' works with HTTP (localhost), 'None' requires HTTPS
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+# Enable CORS with credentials support
+# This allows the React Native app to send cookies with requests
+CORS(app, supports_credentials=True, origins=['http://localhost:8081', 'http://localhost:19006'])
+
 oauth = OAuth(app)
 
 oauth.register(
