@@ -1,6 +1,11 @@
 import { View, Text, StyleSheet, Button } from 'react-native';
+import { NavigationProp } from '@react-navigation/native';
 
-export default function Setting({ navigation }) {
+interface SettingProps {
+  navigation: NavigationProp<any>;
+}
+
+export default function Setting({ navigation }: SettingProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Setting</Text>
