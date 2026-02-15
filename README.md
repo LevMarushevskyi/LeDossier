@@ -1,0 +1,1 @@
+LeDossier is a React native app that allows entrepreneurs, innovators and knowledge workers to store ideas they can't pursue yet. Each idea is assigned an AI Surveillance System which scans the web every 6 hours for key insights such as rising competitors, technology shifts, and market changes, and generates a report for the user so that they can keep their ideas relevant.
