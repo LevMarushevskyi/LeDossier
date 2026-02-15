@@ -36,6 +36,15 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# CDK build output
+cdk.out/
+
+# Deploy artifacts
+ledossier-backend/deploy/*.zip
+
+# AWS CLI installer
+AWSCLIV2.pkg
+
 # generated native folders
 /ios
 /android
