@@ -1,0 +1,22 @@
+{
+  "name": "ledossier-backend",
+  "version": "1.0.0",
+  "bin": {
+    "ledossier-backend": "bin/app.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "cdk": "cdk"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.178.0",
+    "constructs": "^10.4.2",
+    "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "aws-cdk": "^2.178.0",
+    "esbuild": "^0.27.3",
+    "typescript": "~5.7.0"
+  }
+}
