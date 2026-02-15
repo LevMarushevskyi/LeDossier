@@ -1,6 +1,5 @@
-import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, UpdateCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
-import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, ScanCommand, UpdateCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { callBedrock, parseAIJson } from "../shared/ai";
 import { searchWithGemini } from "../gemini-research";
 import { storeToS3, getFromS3 } from "../shared/storage";
@@ -32,7 +31,7 @@ Instructions:
 - Add new entries based on the fresh research findings
 - Remove entries that are now outdated or contradicted by new evidence
 - If a previous surveillance report exists, fold its relevant intelligence into the updated SWOT entries
-- Adjust the confidence score up or down based on whether new research strengthens or weakens the idea's viability
+- RE-SCORE the confidence from scratch using the rubric and ALL available evidence (existing analysis + new research). Do NOT just nudge the previous score by a small amount. If new research reveals a fatal competitor or a market collapse, the score should DROP significantly (e.g., 0.60 → 0.30). If research reveals strong validation, the score should RISE significantly (e.g., 0.45 → 0.70). Small ±2-3% changes are a sign you're not actually processing the new information
 - Provide a concise changeSummary describing what's new or different
 - Generate a surveillance report with two parts:
   1. "discoveries": An array of real-world findings from the research. Each discovery should describe what was found in the real world (a news event, market shift, competitor move, regulatory change, technology trend, etc.) and then explain specifically how it impacts this idea — positively or negatively. These should read like intelligence briefings, not SWOT bullets.
@@ -46,7 +45,7 @@ Return this exact JSON structure:
     "opportunities": ["Specific opportunity 1", "Specific opportunity 2", "Specific opportunity 3"],
     "threats": ["Specific threat 1", "Specific threat 2", "Specific threat 3"]
   },
-  "confidenceScore": 0.65,
+  "confidenceScore": "<REPLACE: use rubric>",
   "confidenceRationale": "Explanation of confidence level and how it changed",
   "changeSummary": "2-3 sentences describing what changed since the last assessment",
   "recommendedNextStep": "The single most impactful next step based on updated intelligence",
@@ -63,7 +62,20 @@ Return this exact JSON structure:
   }
 }
 
-Generate 3-6 discoveries. Be specific, not generic — reference actual findings from the new research. The actionPlan should be substantial (at least 200 words) and read like a strategy memo, not bullet points. Calibrate the confidence score carefully — most ideas should score 0.4-0.7.`;
+Generate 3-6 discoveries. Be specific, not generic — reference actual findings from the new research. The actionPlan should be substantial (at least 200 words) and read like a strategy memo, not bullet points.
+
+CONFIDENCE SCORING RUBRIC — Follow this precisely:
+0.00-0.15: DEAD ON ARRIVAL. Fatal flaw: problem already solved, market doesn't exist, or dominant competitor with unassailable moat.
+0.15-0.30: SEVERELY CHALLENGED. Multiple critical weaknesses: tiny/shrinking market, broken unit economics, or 3+ well-funded competitors.
+0.30-0.45: QUESTIONABLE. Kernel of validity but serious headwinds: crowded market, regulatory risk, or key assumptions contradicted by research.
+0.45-0.60: PLAUSIBLE BUT UNPROVEN. Real market need, significant unknowns. This is where MOST ideas land on first analysis.
+0.60-0.75: PROMISING. Research actively confirms viability. Clear market gap, manageable competition. Reserve for research-backed ideas.
+0.75-0.85: STRONG. Multiple data points confirm viability across dimensions. Only when evidence is compelling.
+0.85-1.00: EXCEPTIONAL. Almost never appropriate.
+
+CRITICAL: Use the FULL range. A score of 0.20 for a bad idea is MORE helpful than a polite 0.55. Do NOT default to 0.55-0.65. Your job is honest analysis, not encouragement.
+
+SURVEILLANCE-SPECIFIC: RE-SCORE confidence from scratch using ALL evidence. Do NOT just nudge the previous score ±2-3%. If research reveals a fatal competitor, DROP the score hard (e.g., 0.60→0.30). If research validates a key assumption, RAISE it meaningfully (e.g., 0.45→0.70). Small deltas mean you aren't processing the new information.`;
 
 const STACK_REPORT_PROMPT = `You are a strategic intelligence analyst. The user has an UNREAD surveillance report from a previous sweep. New research has come in since then. Your job is to consolidate the previous unread report with the new findings into a single updated report with the 3-4 most important insights.
 
@@ -102,7 +114,7 @@ Return ONLY valid JSON (no markdown fencing, no explanation):
     ],
     "actionPlan": "A 3-5 paragraph article in direct advisory tone consolidating the best course of action across all discoveries. Write as if briefing a founder who needs to make decisions this week."
   },
-  "confidenceDelta": 0.05
+  "confidenceDelta": "<REPLACE: meaningful delta reflecting new intel, e.g. -0.15 for bad news, +0.12 for good news>"
 }
 
 Generate exactly 3-4 discoveries — only the most impactful ones. The actionPlan should be at least 200 words. Be specific, reference actual findings.`;
@@ -374,13 +386,13 @@ export async function handler() {
       FilterExpression: "#status IN (:active, :stasis)",
       ExpressionAttributeNames: { "#status": "status" },
       ExpressionAttributeValues: {
-        ":active": { S: "active" },
-        ":stasis": { S: "stasis" },
+        ":active": "active",
+        ":stasis": "stasis",
       },
     })
   );
 
-  const ideas = (scanResult.Items ?? []).map((item) => unmarshall(item));
+  const ideas = scanResult.Items ?? [];
   const total = ideas.length;
   let processed = 0;
   let failed = 0;

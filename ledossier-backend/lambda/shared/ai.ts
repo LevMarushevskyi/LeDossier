@@ -10,11 +10,13 @@ export async function callBedrock(
     new ConverseCommand({
       modelId: "nvidia.nemotron-nano-12b-v2",
       messages: [{ role: "user", content: [{ text: prompt }] }],
-      inferenceConfig: {
-        maxTokens: config?.maxTokens ?? 4096,
-        temperature: config?.temperature ?? 0.4,
-        topP: 0.9,
-      },
+      ...(config && {
+        inferenceConfig: {
+          maxTokens: config.maxTokens ?? 4096,
+          temperature: config.temperature ?? 0.4,
+          topP: 0.9,
+        },
+      }),
     })
   );
   return response.output?.message?.content?.[0]?.text ?? "";
