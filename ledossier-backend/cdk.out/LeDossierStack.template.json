@@ -1,0 +1,853 @@
+{
+ "Resources": {
+  "IdeasTable169A6D0C": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "userId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "ideaId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "userId",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "ideaId",
+      "KeyType": "RANGE"
+     }
+    ],
+    "TableName": "LeDossier-Ideas"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/IdeasTable/Resource"
+   }
+  },
+  "UpdatesTableAB0A8B4D": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "ideaId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "timestamp",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "ideaId",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "timestamp",
+      "KeyType": "RANGE"
+     }
+    ],
+    "TableName": "LeDossier-Updates"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/UpdatesTable/Resource"
+   }
+  },
+  "DossierBucket461F6066": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketName": "ledossier-dossiers-129751814064",
+    "Tags": [
+     {
+      "Key": "aws-cdk:auto-delete-objects",
+      "Value": "true"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/DossierBucket/Resource"
+   }
+  },
+  "DossierBucketPolicy7B4A98A6": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "DossierBucket461F6066"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:PutBucketPolicy",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Fn::GetAtt": [
+          "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+          "Arn"
+         ]
+        }
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "DossierBucket461F6066",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "DossierBucket461F6066",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/DossierBucket/Policy/Resource"
+   }
+  },
+  "DossierBucketAutoDeleteObjectsCustomResourceD2DBA833": {
+   "Type": "Custom::S3AutoDeleteObjects",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+      "Arn"
+     ]
+    },
+    "BucketName": {
+     "Ref": "DossierBucket461F6066"
+    }
+   },
+   "DependsOn": [
+    "DossierBucketPolicy7B4A98A6"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/DossierBucket/AutoDeleteObjectsCustomResource/Default"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ]
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-129751814064-us-east-1",
+     "S3Key": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip"
+    },
+    "Timeout": 900,
+    "MemorySize": 128,
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Description": {
+     "Fn::Join": [
+      "",
+      [
+       "Lambda function for auto-deleting objects in ",
+       {
+        "Ref": "DossierBucket461F6066"
+       },
+       " S3 bucket."
+      ]
+     ]
+    }
+   },
+   "DependsOn": [
+    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler",
+    "aws:asset:path": "asset.faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6",
+    "aws:asset:property": "Code"
+   }
+  },
+  "IdeaIntakeFnServiceRole4064CB96": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/IdeaIntakeFn/ServiceRole/Resource"
+   }
+  },
+  "IdeaIntakeFnServiceRoleDefaultPolicy4140A179": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "IdeasTable169A6D0C",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "IdeasTable169A6D0C",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "UpdatesTableAB0A8B4D",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "UpdatesTableAB0A8B4D",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "DossierBucket461F6066",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "DossierBucket461F6066",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream",
+        "bedrock:Converse"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "IdeaIntakeFnServiceRoleDefaultPolicy4140A179",
+    "Roles": [
+     {
+      "Ref": "IdeaIntakeFnServiceRole4064CB96"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/IdeaIntakeFn/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "IdeaIntakeFnDD07A498": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-129751814064-us-east-1",
+     "S3Key": "5c108b2a78c9f002d37688c327931fca7628f41d95cbbd155e22fc2e94030477.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "IDEAS_TABLE": {
+       "Ref": "IdeasTable169A6D0C"
+      },
+      "UPDATES_TABLE": {
+       "Ref": "UpdatesTableAB0A8B4D"
+      },
+      "DOSSIER_BUCKET": {
+       "Ref": "DossierBucket461F6066"
+      },
+      "GEMINI_API_KEY": "PLACEHOLDER"
+     }
+    },
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "IdeaIntakeFnServiceRole4064CB96",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs18.x",
+    "Timeout": 60
+   },
+   "DependsOn": [
+    "IdeaIntakeFnServiceRoleDefaultPolicy4140A179",
+    "IdeaIntakeFnServiceRole4064CB96"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/IdeaIntakeFn/Resource",
+    "aws:asset:path": "/Users/del/LeGS/ledossier-backend",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "LeDossierApiC4005682": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "Name": "LeDossier API"
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/Resource"
+   }
+  },
+  "LeDossierApiCloudWatchRole607CB5B3": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "apigateway.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/CloudWatchRole/Resource"
+   }
+  },
+  "LeDossierApiAccountE08D03B5": {
+   "Type": "AWS::ApiGateway::Account",
+   "Properties": {
+    "CloudWatchRoleArn": {
+     "Fn::GetAtt": [
+      "LeDossierApiCloudWatchRole607CB5B3",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "LeDossierApiC4005682"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/Account"
+   }
+  },
+  "LeDossierApiDeploymentE5E79E83bda719e8c5948d353e86e13eae7668bc": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "Automatically created by the RestApi construct",
+    "RestApiId": {
+     "Ref": "LeDossierApiC4005682"
+    }
+   },
+   "DependsOn": [
+    "LeDossierApiideasOPTIONS65C89D3D",
+    "LeDossierApiideasPOSTF5D98910",
+    "LeDossierApiideasD91051CB",
+    "LeDossierApiOPTIONS78311AF9"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/Deployment/Resource",
+    "aws:cdk:do-not-refactor": true
+   }
+  },
+  "LeDossierApiDeploymentStageprod557710FC": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "DeploymentId": {
+     "Ref": "LeDossierApiDeploymentE5E79E83bda719e8c5948d353e86e13eae7668bc"
+    },
+    "RestApiId": {
+     "Ref": "LeDossierApiC4005682"
+    },
+    "StageName": "prod"
+   },
+   "DependsOn": [
+    "LeDossierApiAccountE08D03B5"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/DeploymentStage.prod/Resource"
+   }
+  },
+  "LeDossierApiOPTIONS78311AF9": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "LeDossierApiC4005682",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "LeDossierApiC4005682"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/Default/OPTIONS/Resource"
+   }
+  },
+  "LeDossierApiideasD91051CB": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "LeDossierApiC4005682",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "ideas",
+    "RestApiId": {
+     "Ref": "LeDossierApiC4005682"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/Default/ideas/Resource"
+   }
+  },
+  "LeDossierApiideasOPTIONS65C89D3D": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "LeDossierApiideasD91051CB"
+    },
+    "RestApiId": {
+     "Ref": "LeDossierApiC4005682"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/Default/ideas/OPTIONS/Resource"
+   }
+  },
+  "LeDossierApiideasPOSTApiPermissionLeDossierStackLeDossierApi7BEB5DE5POSTideas28FEAC97": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "IdeaIntakeFnDD07A498",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:129751814064:",
+       {
+        "Ref": "LeDossierApiC4005682"
+       },
+       "/",
+       {
+        "Ref": "LeDossierApiDeploymentStageprod557710FC"
+       },
+       "/POST/ideas"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/Default/ideas/POST/ApiPermission.LeDossierStackLeDossierApi7BEB5DE5.POST..ideas"
+   }
+  },
+  "LeDossierApiideasPOSTApiPermissionTestLeDossierStackLeDossierApi7BEB5DE5POSTideas832E6789": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "IdeaIntakeFnDD07A498",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:129751814064:",
+       {
+        "Ref": "LeDossierApiC4005682"
+       },
+       "/test-invoke-stage/POST/ideas"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/Default/ideas/POST/ApiPermission.Test.LeDossierStackLeDossierApi7BEB5DE5.POST..ideas"
+   }
+  },
+  "LeDossierApiideasPOSTF5D98910": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "IdeaIntakeFnDD07A498",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "LeDossierApiideasD91051CB"
+    },
+    "RestApiId": {
+     "Ref": "LeDossierApiC4005682"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/LeDossierApi/Default/ideas/POST/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/21Ry07DMBD8Fu6OQSkHrimIG1AV7pFjL2WT2I6ydqsoyr/jRyAV4jSzs4/xrkte7h743Y24UCFVV/TY8PndCdmxINWzmozQVgXxQzQ9sMdPk8jCaMfnvZcduCiuLMPB9iinTV7jHOwFhe5e6EaJ2lgFLfHXBM/eSIfWMBSaz0eb7RJuEzOL9rUgAke8irAO5HMo+Z0Ty2HUSBSihYkBT8LBRUxhOpCrBkwGG62ktN449gRDbycNJu12FYXLnNKrMgmt1o8S4k7sBdyXVTG5sp/sapL4slzJnpzV/1X9SR1Ge0YFY7JJ60Z7NKfY8+bd4N3C4il5S7fn8p7HH20JsRjDNqiBHzN+A+TeQBbuAQAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "LeDossierApiEndpointD6ACF5A6": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "LeDossierApiC4005682"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "LeDossierApiDeploymentStageprod557710FC"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "ApiUrl": {
+   "Description": "LeDossier API Gateway URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "LeDossierApiC4005682"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "LeDossierApiDeploymentStageprod557710FC"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "IdeasTableName": {
+   "Description": "DynamoDB Ideas table name",
+   "Value": {
+    "Ref": "IdeasTable169A6D0C"
+   }
+  },
+  "BucketName": {
+   "Description": "S3 Dossier bucket name",
+   "Value": {
+    "Ref": "DossierBucket461F6066"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

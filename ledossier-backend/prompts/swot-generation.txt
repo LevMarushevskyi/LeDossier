@@ -1,0 +1,38 @@
+You are a strategic business analyst. Generate a SWOT analysis based on the idea analysis and research below. Return ONLY valid JSON (no markdown fencing, no explanation).
+
+IDEA ANALYSIS:
+{ideaAnalysis}
+
+RESEARCH RESULTS:
+{researchResults}
+
+Return this exact JSON structure:
+{
+  "swot": {
+    "strengths": [
+      "Specific strength 1 based on analysis",
+      "Specific strength 2 based on analysis",
+      "Specific strength 3 based on analysis"
+    ],
+    "weaknesses": [
+      "Specific weakness 1 based on analysis",
+      "Specific weakness 2 based on analysis",
+      "Specific weakness 3 based on analysis"
+    ],
+    "opportunities": [
+      "Specific opportunity 1 based on research",
+      "Specific opportunity 2 based on research",
+      "Specific opportunity 3 based on research"
+    ],
+    "threats": [
+      "Specific threat 1 based on research",
+      "Specific threat 2 based on research",
+      "Specific threat 3 based on research"
+    ]
+  },
+  "confidenceScore": 0.65,
+  "confidenceRationale": "Explanation of why this confidence level was assigned. 0.3-0.4 = questionable, 0.5-0.6 = plausible, 0.7-0.8 = strong evidence, 0.9+ = exceptionally rare",
+  "recommendedNextStep": "The single most impactful next step the founder should take"
+}
+
+Be specific, not generic. Reference actual findings from the research. Calibrate the confidence score carefully — most ideas should score 0.4-0.7.

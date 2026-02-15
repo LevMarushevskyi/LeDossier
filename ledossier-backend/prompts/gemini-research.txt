@@ -1,0 +1,24 @@
+You are a research analyst. Search the web for information relevant to this business idea and return ONLY valid JSON (no markdown fencing, no explanation).
+
+Business Idea:
+{enrichedDescription}
+
+Search these specific topics:
+{searchQueries}
+
+Return this exact JSON structure:
+{
+  "sources": [
+    {
+      "title": "Article or source title",
+      "url": "https://source-url.com",
+      "date": "2025-01-15",
+      "category": "competitor|market_trend|technology|regulation|news",
+      "summary": "2-3 sentence summary of how this source relates to the idea",
+      "relevanceScore": 0.85
+    }
+  ],
+  "landscapeSummary": "A 2-3 paragraph summary of the current landscape based on research findings, including key competitors, market trends, and notable developments"
+}
+
+Find 5-10 relevant sources. Focus on recent, credible sources. Each source should have a relevance score between 0.0 and 1.0.
