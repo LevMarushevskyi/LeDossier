@@ -10,12 +10,29 @@ import { useAuth } from '../contexts/AuthContext';
 
 const API_URL = 'https://dhqrasy77i.execute-api.us-east-1.amazonaws.com/prod';
 
+interface Discovery {
+  finding: string;
+  impact: string;
+}
+
+interface SurveillanceReport {
+  headline: string;
+  viabilityDirection: 'up' | 'down' | 'stable';
+  discoveries: Discovery[];
+  actionPlan: string;
+  generatedAt: string;
+  confidenceDelta: number;
+  newSourceCount: number;
+}
+
 interface Dossier {
   ideaId: string;
   title: string;
   rawInput: string;
   status: string;
   createdAt: string;
+  lastViewedAt?: string;
+  latestReport?: SurveillanceReport | null;
   tags?: string[];
   confidenceScore?: number;
   analysis?: {
@@ -56,6 +73,16 @@ interface Dossier {
   y: number;
 }
 
+function formatTimeAgo(isoDate: string): string {
+  const ms = Date.now() - new Date(isoDate).getTime();
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'yesterday';
+  return `${days}d ago`;
+}
+
 interface IdeaVaultProps {
   navigation: NavigationProp<any>;
 }
@@ -75,6 +102,10 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedIdea, setSelectedIdea] = useState<Dossier | null>(null);
   const [showIdeaDetail, setShowIdeaDetail] = useState(false);
+  const [surveillanceLoading, setSurveillanceLoading] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportDossier, setReportDossier] = useState<Dossier | null>(null);
+  const surveillancePollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Physics engine state
   const physicsEngineRef = useRef<PhysicsEngine | null>(null);
@@ -111,6 +142,9 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
       }
     };
     fetchIdeas();
+    return () => {
+      if (surveillancePollRef.current) clearTimeout(surveillancePollRef.current);
+    };
   }, []);
 
   // Calculate spawn position for new cards (cascade from top-center)
@@ -238,7 +272,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
     if (activeDossier) {
       const s = activeDossier.swot?.swot ?? activeDossier.swot;
       const tags = activeDossier.analysis?.tags ?? activeDossier.tags ?? [];
-      const confidence = activeDossier.swot?.confidenceScore ?? activeDossier.confidenceScore ?? 0;
+      const confidence = activeDossier.confidenceScore ?? activeDossier.swot?.confidenceScore ?? 0;
       return (
         <ScrollView style={styles.dossierScroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.dossierTitle}>{activeDossier.title}</Text>
@@ -261,7 +295,47 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
             <Text style={styles.confidenceScore}>
               {Math.round(confidence * 100)}%
             </Text>
+            {activeDossier.latestReport && (
+              <View style={[
+                styles.confidenceDelta,
+                activeDossier.latestReport.confidenceDelta > 0 ? styles.confidenceDeltaUp :
+                activeDossier.latestReport.confidenceDelta < 0 ? styles.confidenceDeltaDown :
+                styles.confidenceDeltaStable,
+              ]}>
+                <Text style={styles.confidenceDeltaText}>
+                  {activeDossier.latestReport.confidenceDelta > 0 ? '+' : ''}{Math.round(activeDossier.latestReport.confidenceDelta * 100)}%
+                </Text>
+              </View>
+            )}
           </View>
+
+          {activeDossier.latestReport && (
+            <TouchableOpacity
+              style={styles.reportSection}
+              onPress={() => { setReportDossier(activeDossier); setShowReportModal(true); }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.reportHeader}>
+                <Text style={styles.reportTitle}>SURVEILLANCE REPORT</Text>
+                <View style={[
+                  styles.briefingViabilityBadge,
+                  activeDossier.latestReport.viabilityDirection === 'up' && styles.briefingViabilityUp,
+                  activeDossier.latestReport.viabilityDirection === 'down' && styles.briefingViabilityDown,
+                  activeDossier.latestReport.viabilityDirection === 'stable' && styles.briefingViabilityStable,
+                ]}>
+                  <Text style={styles.briefingViabilityText}>
+                    {activeDossier.latestReport.viabilityDirection === 'up' ? 'Trending Up' :
+                     activeDossier.latestReport.viabilityDirection === 'down' ? 'Trending Down' : 'Stable'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.reportHeadline}>{activeDossier.latestReport.headline}</Text>
+              <Text style={styles.reportBody} numberOfLines={2}>
+                {activeDossier.latestReport.discoveries?.[0]?.finding ?? 'New intelligence available'}
+              </Text>
+              <Text style={styles.reportTapHint}>Tap to read full report</Text>
+            </TouchableOpacity>
+          )}
 
           {activeDossier.analysis?.enrichedDescription && (
             <>
@@ -319,14 +393,42 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
       return (
         <ScrollView style={styles.dossierScroll} showsVerticalScrollIndicator={false}>
           {dossiers.map((d, i) => (
-            <TouchableOpacity key={i} style={styles.ideaCard} onPress={() => setActiveDossier(d)}>
-              <Text style={styles.ideaCardTitle}>{d.title}</Text>
+            <TouchableOpacity key={i} style={styles.ideaCard} onPress={() => handleDossierTap(d)}>
+              <View style={styles.ideaCardHeader}>
+                <Text style={styles.ideaCardTitle}>{d.title}</Text>
+                {d.latestReport && (
+                  <View style={styles.reportAvailableBadge}>
+                    <Text style={styles.reportAvailableText}>Report</Text>
+                  </View>
+                )}
+              </View>
               {d.analysis?.domain && (
                 <Text style={styles.ideaCardDomain}>{d.analysis.domain}</Text>
               )}
-              <Text style={styles.ideaCardScore}>
-                Confidence: {Math.round((d.swot?.confidenceScore ?? d.confidenceScore ?? 0) * 100)}%
-              </Text>
+              <View style={styles.ideaCardFooter}>
+                <View style={styles.ideaCardScoreRow}>
+                  <Text style={styles.ideaCardScore}>
+                    Confidence: {Math.round((d.confidenceScore ?? d.swot?.confidenceScore ?? 0) * 100)}%
+                  </Text>
+                  {d.latestReport && (
+                    <View style={[
+                      styles.confidenceDeltaSmall,
+                      d.latestReport.confidenceDelta > 0 ? styles.confidenceDeltaUp :
+                      d.latestReport.confidenceDelta < 0 ? styles.confidenceDeltaDown :
+                      styles.confidenceDeltaStable,
+                    ]}>
+                      <Text style={styles.confidenceDeltaSmallText}>
+                        {d.latestReport.confidenceDelta > 0 ? '+' : ''}{Math.round(d.latestReport.confidenceDelta * 100)}%
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {d.lastViewedAt && (
+                  <Text style={styles.ideaCardLastViewed}>
+                    Viewed {formatTimeAgo(d.lastViewedAt)}
+                  </Text>
+                )}
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -337,8 +439,110 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   };
 
   const handleIdeaClick = (idea: Dossier) => {
-    setSelectedIdea(idea);
-    setShowIdeaDetail(true);
+    handleCardTap(idea);
+  };
+
+  const handleDossierTap = async (idea: Dossier) => {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch(`${API_URL}/ideas/${idea.ideaId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        const updatedIdea = { ...idea, ...data.idea };
+        setActiveDossier(updatedIdea);
+        setDossiers(prev => prev.map(d => d.ideaId === idea.ideaId ? updatedIdea : d));
+        setIdeas(prev => prev.map(d => d.ideaId === idea.ideaId ? updatedIdea : d));
+      } else {
+        setActiveDossier(idea);
+      }
+    } catch (err) {
+      console.error('Failed to fetch idea view:', err);
+      setActiveDossier(idea);
+    }
+  };
+
+  const refreshIdeas = async (): Promise<any[]> => {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch(`${API_URL}/ideas`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok && data.ideas) {
+        const stored = data.ideas.map((idea: any, i: number) => ({
+          ...idea,
+          x: 80 + (i % 3) * 100,
+          y: 80 + Math.floor(i / 3) * 80,
+        }));
+        setDossiers(stored);
+        setIdeas(stored);
+        return data.ideas;
+      }
+    } catch (err) {
+      console.error('Failed to refresh ideas:', err);
+    }
+    return [];
+  };
+
+  const handleRunSurveillance = async () => {
+    setSurveillanceLoading(true);
+
+    try {
+      const token = await getAuthToken();
+      // Fire-and-forget: trigger surveillance but don't wait for response
+      // API Gateway has 29s timeout but Lambda runs for up to 5 min in background
+      fetch(`${API_URL}/surveillance/trigger`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      }).then(r => r.json()).then(d => {
+        console.log('Surveillance response:', d);
+      }).catch(() => {
+        // Expected: API Gateway may timeout at 29s, but Lambda keeps running
+      });
+
+      // Track which ideas had reports before surveillance started
+      const preSweepTimestamps = new Map<string, string>();
+      for (const d of dossiers) {
+        preSweepTimestamps.set(d.ideaId, d.latestReport?.generatedAt ?? '');
+      }
+      const totalIdeas = dossiers.length;
+
+      // Poll GET /ideas every 5s to pick up changes as each idea finishes
+      const startTime = Date.now();
+      const maxDuration = 5 * 60 * 1000; // 5 minutes max
+      const pollInterval = 5000;
+
+      const poll = async () => {
+        const freshIdeas = await refreshIdeas();
+
+        // Check how many ideas have been updated since sweep started
+        let updatedCount = 0;
+        for (const idea of freshIdeas) {
+          const prevTs = preSweepTimestamps.get(idea.ideaId) ?? '';
+          const newTs = idea.latestReport?.generatedAt ?? '';
+          if (newTs && newTs !== prevTs) updatedCount++;
+        }
+        if (updatedCount >= totalIdeas) {
+          // All ideas processed — stop polling
+          setSurveillanceLoading(false);
+          return;
+        }
+        if (Date.now() - startTime < maxDuration) {
+          surveillancePollRef.current = setTimeout(poll, pollInterval);
+        } else {
+          setSurveillanceLoading(false);
+        }
+      };
+
+      // Start polling after a short initial delay
+      surveillancePollRef.current = setTimeout(poll, pollInterval);
+    } catch (err) {
+      console.error('Surveillance trigger failed:', err);
+      setSurveillanceLoading(false);
+    }
   };
 
   // Initialize physics engine when container layout is known
@@ -435,9 +639,29 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   }, [ideas, cardPositions]);
 
   // Gesture handlers
-  const handleCardTap = (idea: Dossier) => {
-    setSelectedIdea(idea);
-    setShowIdeaDetail(true);
+  const handleCardTap = async (idea: Dossier) => {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch(`${API_URL}/ideas/${idea.ideaId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        const updatedIdea = { ...idea, ...data.idea };
+        setSelectedIdea(updatedIdea);
+        setShowIdeaDetail(true);
+        setDossiers(prev => prev.map(d => d.ideaId === idea.ideaId ? updatedIdea : d));
+        setIdeas(prev => prev.map(d => d.ideaId === idea.ideaId ? updatedIdea : d));
+      } else {
+        setSelectedIdea(idea);
+        setShowIdeaDetail(true);
+      }
+    } catch (err) {
+      console.error('Failed to fetch idea view:', err);
+      setSelectedIdea(idea);
+      setShowIdeaDetail(true);
+    }
   };
 
   const handleDragStart = (id: string) => {
@@ -516,6 +740,13 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
         >
           <Text style={styles.actionButtonText}>{loading ? 'PROCESSING...' : 'IDEATE'}</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.testButton, surveillanceLoading && styles.actionButtonDisabled]}
+          onPress={handleRunSurveillance}
+          disabled={surveillanceLoading}
+        >
+          <Text style={styles.testButtonText}>{surveillanceLoading ? 'SWEEPING...' : 'RUN SURVEILLANCE'}</Text>
+        </TouchableOpacity>
       </View>
       <Modal visible={showPanel} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -569,6 +800,79 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
                 <Text style={styles.deleteButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={showReportModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.reportModalPanel}>
+            {reportDossier?.latestReport && (() => {
+              const report = reportDossier.latestReport!;
+              const confidence = reportDossier.confidenceScore ?? reportDossier.swot?.confidenceScore ?? 0;
+              return (
+                <>
+                  <View style={styles.reportModalHeader}>
+                    <Text style={styles.reportModalTitle}>SURVEILLANCE REPORT</Text>
+                    <View style={[
+                      styles.briefingViabilityBadge,
+                      report.viabilityDirection === 'up' && styles.briefingViabilityUp,
+                      report.viabilityDirection === 'down' && styles.briefingViabilityDown,
+                      report.viabilityDirection === 'stable' && styles.briefingViabilityStable,
+                    ]}>
+                      <Text style={styles.briefingViabilityText}>
+                        {report.viabilityDirection === 'up' ? 'Trending Up' :
+                         report.viabilityDirection === 'down' ? 'Trending Down' : 'Stable'}
+                      </Text>
+                    </View>
+                  </View>
+                  <ScrollView style={styles.reportModalScroll} showsVerticalScrollIndicator={false}>
+                    <Text style={styles.reportModalHeadline}>{report.headline}</Text>
+
+                    <View style={styles.reportModalStats}>
+                      <View style={styles.reportModalStat}>
+                        <Text style={styles.reportModalStatValue}>{Math.round(confidence * 100)}%</Text>
+                        <Text style={styles.reportModalStatLabel}>Confidence</Text>
+                      </View>
+                      <View style={styles.reportModalStat}>
+                        <Text style={styles.reportModalStatValue}>
+                          {report.confidenceDelta > 0 ? '+' : ''}{Math.round(report.confidenceDelta * 100)}%
+                        </Text>
+                        <Text style={styles.reportModalStatLabel}>Change</Text>
+                      </View>
+                      <View style={styles.reportModalStat}>
+                        <Text style={styles.reportModalStatValue}>{report.newSourceCount}</Text>
+                        <Text style={styles.reportModalStatLabel}>New Sources</Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.reportModalSectionTitle}>Intelligence Discoveries</Text>
+                    {(report.discoveries ?? []).map((d: Discovery, i: number) => (
+                      <View key={i} style={styles.discoveryCard}>
+                        <Text style={styles.discoveryFinding}>{d.finding}</Text>
+                        <View style={styles.discoveryImpactRow}>
+                          <Text style={styles.discoveryImpactLabel}>Impact:</Text>
+                          <Text style={styles.discoveryImpactText}>{d.impact}</Text>
+                        </View>
+                      </View>
+                    ))}
+
+                    <Text style={styles.reportModalSectionTitle}>Recommended Course of Action</Text>
+                    <Text style={styles.actionPlanText}>{report.actionPlan}</Text>
+
+                    <Text style={styles.reportModalTimestamp}>
+                      Report generated {new Date(report.generatedAt).toLocaleDateString()} at {new Date(report.generatedAt).toLocaleTimeString()}
+                    </Text>
+                    <View style={{ height: 20 }} />
+                  </ScrollView>
+                  <TouchableOpacity
+                    style={styles.reportModalClose}
+                    onPress={() => setShowReportModal(false)}
+                  >
+                    <Text style={styles.reportModalCloseText}>Close</Text>
+                  </TouchableOpacity>
+                </>
+              );
+            })()}
           </View>
         </View>
       </Modal>
@@ -1031,5 +1335,296 @@ const styles = StyleSheet.create({
     color: '#FFFDEE',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  briefingViabilityBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  briefingViabilityUp: {
+    backgroundColor: '#1a5c2a',
+  },
+  briefingViabilityDown: {
+    backgroundColor: '#8b1a1a',
+  },
+  briefingViabilityStable: {
+    backgroundColor: '#0C001A',
+  },
+  briefingViabilityText: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 11,
+    color: '#FFFDEE',
+    fontWeight: 'bold',
+  },
+  reportSection: {
+    backgroundColor: 'rgba(12, 0, 26, 0.08)',
+    borderLeftWidth: 4,
+    borderLeftColor: '#0C001A',
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 16,
+  },
+  reportHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reportTitle: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0C001A',
+    letterSpacing: 1,
+  },
+  reportHeadline: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0C001A',
+    marginBottom: 8,
+  },
+  reportBody: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 13,
+    color: '#0C001A',
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  reportActionLabel: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#0C001A',
+    marginBottom: 2,
+  },
+  reportActionText: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 12,
+    color: '#0C001A',
+    lineHeight: 18,
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  reportTimestamp: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 10,
+    color: '#0C001A',
+    opacity: 0.5,
+  },
+  ideaCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ideaCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  reportAvailableBadge: {
+    backgroundColor: '#0C001A',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  reportAvailableText: {
+    fontFamily: 'NotoSerif_400Regular',
+    color: '#FFFDEE',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  ideaCardLastViewed: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 10,
+    color: '#0C001A',
+    opacity: 0.5,
+  },
+  confidenceDelta: {
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  confidenceDeltaUp: {
+    backgroundColor: '#1a5c2a',
+  },
+  confidenceDeltaDown: {
+    backgroundColor: '#8b1a1a',
+  },
+  confidenceDeltaStable: {
+    backgroundColor: '#555',
+  },
+  confidenceDeltaText: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFDEE',
+  },
+  ideaCardScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  confidenceDeltaSmall: {
+    paddingVertical: 1,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    marginLeft: 6,
+  },
+  confidenceDeltaSmallText: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#FFFDEE',
+  },
+  reportTapHint: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 11,
+    color: '#0C001A',
+    opacity: 0.5,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  reportModalPanel: {
+    width: '92%',
+    maxHeight: '88%',
+    backgroundColor: '#0C001A',
+    borderRadius: 12,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#FFFDEE',
+  },
+  reportModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  reportModalTitle: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFDEE',
+    letterSpacing: 2,
+  },
+  reportModalScroll: {
+    flex: 1,
+  },
+  reportModalHeadline: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFDEE',
+    marginBottom: 16,
+    lineHeight: 28,
+  },
+  reportModalStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(255, 253, 238, 0.08)',
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 20,
+  },
+  reportModalStat: {
+    alignItems: 'center',
+  },
+  reportModalStatValue: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFDEE',
+  },
+  reportModalStatLabel: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 10,
+    color: '#FFFDEE',
+    opacity: 0.6,
+    marginTop: 2,
+  },
+  reportModalSectionTitle: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFDEE',
+    letterSpacing: 1,
+    marginTop: 16,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  reportModalBody: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 14,
+    color: '#FFFDEE',
+    lineHeight: 22,
+    opacity: 0.9,
+  },
+  discoveryCard: {
+    backgroundColor: 'rgba(255, 253, 238, 0.06)',
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: 'rgba(255, 253, 238, 0.3)',
+  },
+  discoveryFinding: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 14,
+    color: '#FFFDEE',
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  discoveryImpactRow: {
+    backgroundColor: 'rgba(255, 253, 238, 0.05)',
+    borderRadius: 6,
+    padding: 10,
+  },
+  discoveryImpactLabel: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#FFFDEE',
+    opacity: 0.6,
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  discoveryImpactText: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 13,
+    color: '#FFFDEE',
+    lineHeight: 20,
+    opacity: 0.9,
+    fontStyle: 'italic',
+  },
+  actionPlanText: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 14,
+    color: '#FFFDEE',
+    lineHeight: 24,
+    opacity: 0.9,
+  },
+  reportModalTimestamp: {
+    fontFamily: 'NotoSerif_400Regular',
+    fontSize: 11,
+    color: '#FFFDEE',
+    opacity: 0.4,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  reportModalClose: {
+    backgroundColor: '#FFFDEE',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 6,
+    alignSelf: 'center',
+    marginTop: 16,
+  },
+  reportModalCloseText: {
+    fontFamily: 'NotoSerif_400Regular',
+    color: '#0C001A',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });

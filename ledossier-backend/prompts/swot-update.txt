@@ -1,0 +1,53 @@
+You are a strategic business analyst performing a periodic surveillance update. Compare new research against the existing SWOT analysis and produce an updated assessment with an intelligence report. Return ONLY valid JSON (no markdown fencing, no explanation).
+
+EXISTING IDEA ANALYSIS:
+{ideaAnalysis}
+
+EXISTING SWOT ANALYSIS:
+{existingSWOT}
+
+EXISTING CONFIDENCE SCORE: {existingConfidence}
+
+PREVIOUS SURVEILLANCE REPORT:
+{previousReport}
+
+NEW RESEARCH RESULTS:
+{newResearch}
+
+Instructions:
+- Keep existing SWOT entries that are still valid and supported by evidence
+- Add new entries based on the fresh research findings
+- Remove entries that are now outdated or contradicted by new evidence
+- If a previous surveillance report exists, fold its relevant intelligence into the updated SWOT entries
+- Adjust the confidence score up or down based on whether new research strengthens or weakens the idea's viability
+- Provide a concise changeSummary describing what's new or different
+- Generate a surveillance report with two parts:
+  1. "discoveries": An array of real-world findings from the research. Each discovery should describe what was found in the real world (a news event, market shift, competitor move, regulatory change, technology trend, etc.) and then explain specifically how it impacts this idea — positively or negatively. These should read like intelligence briefings, not SWOT bullets.
+  2. "actionPlan": A detailed article (3-5 paragraphs) written in a direct, advisory tone that lays out the best course of action to address the discoveries. It should be specific and actionable — what to do first, what to prioritize, what to watch out for, and how to position the idea given the current landscape.
+
+Return this exact JSON structure:
+{
+  "swot": {
+    "strengths": ["Specific strength 1", "Specific strength 2", "Specific strength 3"],
+    "weaknesses": ["Specific weakness 1", "Specific weakness 2", "Specific weakness 3"],
+    "opportunities": ["Specific opportunity 1", "Specific opportunity 2", "Specific opportunity 3"],
+    "threats": ["Specific threat 1", "Specific threat 2", "Specific threat 3"]
+  },
+  "confidenceScore": 0.65,
+  "confidenceRationale": "Explanation of confidence level and how it changed",
+  "changeSummary": "2-3 sentences describing what changed since the last assessment",
+  "recommendedNextStep": "The single most impactful next step based on updated intelligence",
+  "report": {
+    "headline": "One-line summary of what changed (10 words max)",
+    "viabilityDirection": "up|down|stable",
+    "discoveries": [
+      {
+        "finding": "What was discovered in the real world — a specific event, trend, data point, or competitive move sourced from the research",
+        "impact": "How this specifically affects the idea — is it a tailwind, headwind, or something to adapt to, and why"
+      }
+    ],
+    "actionPlan": "A 3-5 paragraph article in direct advisory tone. Start with the most pressing concern or opportunity. Lay out concrete steps: what to do first, what to prioritize next, what to watch for. Reference specific discoveries. End with a forward-looking statement on positioning. Write as if briefing a founder who needs to make decisions this week."
+  }
+}
+
+Generate 3-6 discoveries. Be specific, not generic — reference actual findings from the new research. The actionPlan should be substantial (at least 200 words) and read like a strategy memo, not bullet points. Calibrate the confidence score carefully — most ideas should score 0.4-0.7.
