@@ -613,3 +613,12 @@ BUG FIXES & CHANGES
     - Positioned inside contentContainer, centered with other elements
     - Rectangular shape with subtle border (rgba 0.4 opacity)
     - Uses NotoSerif_400Regular font at 14px
+
+[2026-02-15 16:30] IdeaVault layout and scrolling fixes
+  - Fixed physics cards being unreachable due to rendering condition
+    - Changed contentBox condition from `loading || errorMsg || activeDossier || dossiers.length > 0` to `loading || errorMsg || activeDossier`
+    - Physics draggable cards now display as the default view
+    - List/detail view only shows when loading, error, or viewing a specific dossier
+  - Made IDEATE and RUN SURVEILLANCE buttons horizontal
+    - Footer changed from vertical stack to flexDirection: 'row' with gap: 15
+  - Fixed scrolling issues in the post-analysis dossier detail view

@@ -100,8 +100,6 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [selectedIdea, setSelectedIdea] = useState<Dossier | null>(null);
-  const [showIdeaDetail, setShowIdeaDetail] = useState(false);
   const [surveillanceLoading, setSurveillanceLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportDossier, setReportDossier] = useState<Dossier | null>(null);
@@ -109,6 +107,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
 
   // Physics engine state
   const physicsEngineRef = useRef<PhysicsEngine | null>(null);
+  const engineInitialized = useRef(false);
   const [containerLayout, setContainerLayout] = useState({ width: 0, height: 0 });
   const cardPositions = useRef(new Map<string, {
     x: Animated.SharedValue<number>;
@@ -274,7 +273,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
       const tags = activeDossier.analysis?.tags ?? activeDossier.tags ?? [];
       const confidence = activeDossier.confidenceScore ?? activeDossier.swot?.confidenceScore ?? 0;
       return (
-        <ScrollView style={styles.dossierScroll} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.dossierScroll} showsVerticalScrollIndicator={true}>
           <Text style={styles.dossierTitle}>{activeDossier.title}</Text>
           {activeDossier.analysis?.domain && (
             <Text style={styles.dossierDomain}>{activeDossier.analysis.domain}</Text>
@@ -391,7 +390,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
 
     if (dossiers.length > 0) {
       return (
-        <ScrollView style={styles.dossierScroll} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.dossierScroll} showsVerticalScrollIndicator={true}>
           {dossiers.map((d, i) => (
             <TouchableOpacity key={i} style={styles.ideaCard} onPress={() => handleDossierTap(d)}>
               <View style={styles.ideaCardHeader}>
@@ -545,19 +544,26 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
     }
   };
 
-  // Initialize physics engine when container layout is known
+  // Initialize physics engine once when container layout is first known
   useEffect(() => {
-    if (containerLayout.width > 0 && containerLayout.height > 0) {
+    if (containerLayout.width > 0 && containerLayout.height > 0 && !engineInitialized.current) {
+      engineInitialized.current = true;
       physicsEngineRef.current = new PhysicsEngine(
         containerLayout.width,
         containerLayout.height
       );
     }
+  }, [containerLayout.width, containerLayout.height]);
 
+  // Cleanup only on unmount
+  useEffect(() => {
     return () => {
       physicsEngineRef.current?.destroy();
+      physicsEngineRef.current = null;
+      engineInitialized.current = false;
+      cardPositions.clear();
     };
-  }, [containerLayout.width, containerLayout.height]);
+  }, []);
 
   // Create shared values for new ideas and sync with physics
   useEffect(() => {
@@ -575,7 +581,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
         });
 
         // Add to physics engine
-        physicsEngineRef.current.addCard(
+        physicsEngineRef.current!.addCard(
           idea.ideaId,
           idea.x,
           idea.y,
@@ -640,28 +646,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
 
   // Gesture handlers
   const handleCardTap = async (idea: Dossier) => {
-    try {
-      const token = await getAuthToken();
-      const response = await fetch(`${API_URL}/ideas/${idea.ideaId}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      const data = await response.json();
-
-      if (response.ok) {
-        const updatedIdea = { ...idea, ...data.idea };
-        setSelectedIdea(updatedIdea);
-        setShowIdeaDetail(true);
-        setDossiers(prev => prev.map(d => d.ideaId === idea.ideaId ? updatedIdea : d));
-        setIdeas(prev => prev.map(d => d.ideaId === idea.ideaId ? updatedIdea : d));
-      } else {
-        setSelectedIdea(idea);
-        setShowIdeaDetail(true);
-      }
-    } catch (err) {
-      console.error('Failed to fetch idea view:', err);
-      setSelectedIdea(idea);
-      setShowIdeaDetail(true);
-    }
+    await handleDossierTap(idea);
   };
 
   const handleDragStart = (id: string) => {
@@ -693,13 +678,13 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
       <View style={styles.mainContent}>
         <Text style={styles.pageTitle}>Idea Vault</Text>
         <View
-          style={styles.contentBox}
+          style={[styles.contentBox, (loading || errorMsg || activeDossier) && styles.contentBoxFill]}
           onLayout={(event) => {
             const { width, height} = event.nativeEvent.layout;
             setContainerLayout({ width, height });
           }}
         >
-          {loading || errorMsg || activeDossier || dossiers.length > 0 ? (
+          {loading || errorMsg || activeDossier ? (
             renderDossierContent()
           ) : ideas.length === 0 ? (
             <Text style={styles.boxText}>Your ideas will appear here</Text>
@@ -732,22 +717,24 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
         </View>
       </View>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.actionButton, loading && styles.actionButtonDisabled]}
-          onPress={() => setShowPanel(true)}
-          disabled={loading}
-        >
-          <Text style={styles.actionButtonText}>{loading ? 'PROCESSING...' : 'IDEATE'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.testButton, surveillanceLoading && styles.actionButtonDisabled]}
-          onPress={handleRunSurveillance}
-          disabled={surveillanceLoading}
-        >
-          <Text style={styles.testButtonText}>{surveillanceLoading ? 'SWEEPING...' : 'RUN SURVEILLANCE'}</Text>
-        </TouchableOpacity>
-      </View>
+      {!activeDossier && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.actionButton, loading && styles.actionButtonDisabled]}
+            onPress={() => setShowPanel(true)}
+            disabled={loading}
+          >
+            <Text style={styles.actionButtonText}>{loading ? 'PROCESSING...' : 'IDEATE'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, surveillanceLoading && styles.actionButtonDisabled]}
+            onPress={handleRunSurveillance}
+            disabled={surveillanceLoading}
+          >
+            <Text style={styles.actionButtonText}>{surveillanceLoading ? 'SWEEPING...' : 'SURVEILLANCE'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <Modal visible={showPanel} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.panel}>
@@ -825,7 +812,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
                       </Text>
                     </View>
                   </View>
-                  <ScrollView style={styles.reportModalScroll} showsVerticalScrollIndicator={false}>
+                  <ScrollView style={styles.reportModalScroll} showsVerticalScrollIndicator={true}>
                     <Text style={styles.reportModalHeadline}>{report.headline}</Text>
 
                     <View style={styles.reportModalStats}>
@@ -873,26 +860,6 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
                 </>
               );
             })()}
-          </View>
-        </View>
-      </Modal>
-      <Modal visible={showIdeaDetail} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.ideaDetailPanel}>
-            {selectedIdea && (
-              <>
-                <Text style={styles.ideaDetailTitle}>{selectedIdea.title}</Text>
-                <ScrollView style={styles.ideaDetailScroll}>
-                  <Text style={styles.ideaDetailDescription}>{selectedIdea.rawInput}</Text>
-                </ScrollView>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={() => setShowIdeaDetail(false)}
-                >
-                  <Text style={styles.closeButtonText}>Close</Text>
-                </TouchableOpacity>
-              </>
-            )}
           </View>
         </View>
       </Modal>
@@ -953,13 +920,17 @@ const styles = StyleSheet.create({
   },
   contentBox: {
     width: '90%',
-    height: '60%',
+    flex: 1,
     backgroundColor: '#FFFDEE',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
     overflow: 'hidden',
+  },
+  contentBoxFill: {
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
   },
   physicsContainer: {
     flex: 1,
@@ -973,16 +944,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     padding: 20,
-    alignItems: 'center',
-    gap: 10,
+    gap: 15,
   },
   actionButton: {
     backgroundColor: '#FFFDEE',
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 10,
-    marginBottom: 10,
   },
   actionButtonText: {
     fontFamily: 'NotoSerif_400Regular',
@@ -1004,9 +975,8 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(12, 0, 26, 0.5)',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 40,
   },
   panel: {
     width: '90%',
@@ -1171,6 +1141,9 @@ const styles = StyleSheet.create({
   },
   dossierScroll: {
     flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
     width: '100%',
   },
   dossierTitle: {
