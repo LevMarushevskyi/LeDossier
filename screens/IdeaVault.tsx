@@ -440,17 +440,22 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
   };
 
   const handleDeleteDossier = async (idea: Dossier) => {
-    const index = ideas.indexOf(idea)
-    ideas.splice(index, 1);
-
     const token = await getAuthToken();
 
-    await fetch(`${API_URL}/ideas/${idea.ideaId}`, {
+    const response = await fetch(`${API_URL}/ideas/${idea.ideaId}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
+
+    if (!response.ok) {
+      console.error('Failed to delete idea:', await response.text());
+      return;
+    }
+
+    setIdeas(prev => prev.filter(d => d.ideaId !== idea.ideaId));
+    setDossiers(prev => prev.filter(d => d.ideaId !== idea.ideaId));
   }
 
   const handleIdeaClick = (idea: Dossier) => {

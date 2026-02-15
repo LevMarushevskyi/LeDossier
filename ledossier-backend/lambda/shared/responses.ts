@@ -2,7 +2,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "Content-Type,Authorization,X-Amz-Date,X-Api-Key",
-  "Access-Control-Allow-Methods": "OPTIONS,POST,GET",
+  "Access-Control-Allow-Methods": "OPTIONS,POST,GET,DELETE",
 };
 
 export function success(body: any, statusCode = 200) {

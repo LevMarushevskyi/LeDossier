@@ -20,16 +20,12 @@ export async function handler(event: any) {
     }
 
     if (event.httpMethod === "DELETE") {
-      try {
-        await ddb.send(
-          new DeleteCommand({
-            TableName: IDEAS_TABLE,
-            Key: { userId: user.userId, ideaId },
-          })
-        );
-      } catch (err) {
-        console.error("Delete error:", err);
-      }
+      await ddb.send(
+        new DeleteCommand({
+          TableName: IDEAS_TABLE,
+          Key: { userId: user.userId, ideaId },
+        })
+      );
 
       return success({ message: "Idea deleted" });
     }
