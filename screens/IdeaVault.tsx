@@ -47,9 +47,6 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
         <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Notification')}>
           <Text style={styles.navButtonText}>Notifications</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Setting')}>
-          <Text style={styles.navButtonText}>Settings</Text>
-        </TouchableOpacity>
       </View>
 
       <View style={styles.mainContent}>

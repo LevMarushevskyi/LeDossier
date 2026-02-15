@@ -297,3 +297,60 @@ BUG FIXES & CHANGES
   - App now renders correctly and stays visible without crashes
   - All functionality preserved (navigation, modals, idea storage)
   - Note: Original animated backgrounds and SVG styling removed for stability
+
+[2026-02-14 21:15] Implemented custom door.png page transition animation
+  - Created DoorTransition component in App.tsx
+  - Door image scales from 0.1x to 35x over 400ms (expanding effect)
+  - Door rotates 360 degrees while expanding for dynamic effect
+  - Then fades out over 300ms to reveal new page
+  - Transition triggers on all navigation events
+  - Disabled default React Navigation transitions (instant page switches)
+  - Overlay positioned with zIndex 1000 to appear above all content
+  - Uses Animated API with cubic easing for smooth animation
+  - Increased scale to 35x to ensure door fully covers entire screen
+
+[2026-02-14 21:20] Fixed transition flash issue
+  - Changed overlay container from Animated.View to View with solid background
+  - Background color (#0C001A) now immediately covers screen when transition starts
+  - Only the door image fades out, not the entire overlay
+  - Eliminates brief flash of new page before transition animation begins
+
+[2026-02-14 21:25] Removed Settings page
+  - Deleted screens/Setting.tsx file
+  - Removed Setting import from App.tsx
+  - Removed Setting Stack.Screen from navigation
+  - Removed Settings button from IdeaVault.tsx header
+
+[2026-02-14 21:30] Updated web favicon
+  - Added web configuration to app.json
+  - Set favicon to door.png for web builds
+
+[2026-02-14 21:35] Added authentication flow with Flask backend
+  - Created new SignIn screen (screens/SignIn.tsx)
+  - Integrated WebView for OAuth authentication with Flask/Cognito
+  - Installed react-native-webview package
+  - Updated navigation flow: Home → SignIn → IdeaVault
+  - Home screen now routes to SignIn instead of directly to IdeaVault
+  - SignIn screen handles OAuth flow via Flask backend at localhost:5000
+  - WebView monitors navigation to detect successful authentication
+  - Added cancel button to exit authentication flow
+  - Styled SignIn page to match app theme (dark purple and cream)
+
+[2026-02-14 21:40] Fixed WebView platform compatibility issue
+  - Replaced react-native-webview with expo-web-browser (cross-platform compatible)
+  - Installed expo-auth-session and expo-web-browser packages
+  - Updated SignIn.tsx to use WebBrowser.openAuthSessionAsync for OAuth flow
+  - Opens authentication in system browser instead of embedded WebView
+  - Added deep linking scheme "ledossier://" to app.json for OAuth callbacks
+  - Works on iOS, Android, and Web platforms
+  - Added loading state with message "Opening browser for authentication..."
+
+[2026-02-14 21:45] Configured complete Cognito OAuth flow
+  - Updated Flask main.py to use /authorize endpoint as OAuth callback
+  - Flask /authorize now redirects to app using deep link: ledossier://auth?email=X&success=true
+  - Installed expo-linking package for deep link handling
+  - Added deep link listener in SignIn.tsx to detect OAuth callback
+  - Parses email and success parameters from deep link URL
+  - Automatically navigates to IdeaVault on successful authentication
+  - Added error handling and error message display for failed authentication
+  - Deep link callback format: ledossier://auth with query parameters

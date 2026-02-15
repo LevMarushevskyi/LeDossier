@@ -10,7 +10,7 @@ oauth.register(
   name='oidc',
   authority='https://cognito-idp.us-east-1.amazonaws.com/us-east-1_XSZEJwbSO',
   client_id='54lian7roa16c4rc4uou9mvu2v',
-  client_secret='<client secret>',
+  client_secret='oiktgi9sb0514gj0o324shmitmt7g3d1ca2bkn5sf4vh93n99jr',
   server_metadata_url='https://cognito-idp.us-east-1.amazonaws.com/us-east-1_XSZEJwbSO/.well-known/openid-configuration',
   client_kwargs={'scope': 'email'}
 )
@@ -25,17 +25,20 @@ def index():
     
 @app.route('/login')
 def login():
-    # Alternate option to redirect to /authorize
-    # redirect_uri = url_for('authorize', _external=True)
-    # return oauth.oidc.authorize_redirect(redirect_uri)
-    return oauth.oidc.authorize_redirect('https://d84l1y8p4kdic.cloudfront.net')
+    # Use the authorize endpoint as the OAuth callback
+    redirect_uri = url_for('authorize', _external=True)
+    return oauth.oidc.authorize_redirect(redirect_uri)
 
 @app.route('/authorize')
 def authorize():
     token = oauth.oidc.authorize_access_token()
     user = token['userinfo']
     session['user'] = user
-    return redirect(url_for('index'))
+
+    # Redirect back to React Native app using deep link
+    # Pass user email and success status
+    email = user.get('email', 'user')
+    return redirect(f'ledossier://auth?email={email}&success=true')
 
 @app.route('/logout')
 def logout():

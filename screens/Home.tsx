@@ -14,7 +14,7 @@ export default function Home({ navigation }: HomeProps) {
       <View style={styles.centerShapes}>
         <TouchableOpacity
           style={styles.signInButton}
-          onPress={() => navigation.navigate('IdeaVault')}
+          onPress={() => navigation.navigate('SignIn')}
         >
           <Text style={styles.signInText}>SIGN IN</Text>
         </TouchableOpacity>

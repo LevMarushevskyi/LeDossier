@@ -7,6 +7,7 @@
     "icon": "./assets/door.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "ledossier",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -26,8 +27,12 @@
       "package": "com.ledossier.app",
       "versionCode": 1
     },
+    "web": {
+      "favicon": "./assets/door.png"
+    },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-web-browser"
     ]
   }
 }
