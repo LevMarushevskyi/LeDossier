@@ -591,3 +591,25 @@ BUG FIXES & CHANGES
   - Added try/catch wrapped signOut() before signIn() and signUp() calls
   - Silently ignores errors if no user is currently signed in
   - Resolves issue where users couldn't sign in or register due to persisted sessions
+
+[2026-02-15 16:00] Home and SignIn page visual redesign
+  - Home page title redesigned: "Le" (bold) on first line, "Dossier" indented on second line
+    - Font size increased to 120px (PetitFormalScript)
+    - "Dossier" offset with marginLeft: 80 to start where "Le" ends horizontally
+  - Split Home page into topHalf (title + divider) and bottomHalf (sign in button)
+    - Added 1px #FFFDEE horizontal divider line under title
+    - Both halves use flex: 1 for equal vertical space
+  - Added center strip with SVG gradient fade to Home and SignIn pages
+    - Absolute positioned strip from 10% to 90% width
+    - Horizontal LinearGradient: transparent → solid → solid → transparent
+    - Fade points at 0%, 25%, 75%, 100% for smooth edge blending
+    - Uses unique IDs per component (useMemo + random) to prevent SVG ID conflicts across navigation
+  - SignIn page cleanup
+    - Removed "Le Dossier" title text
+    - Added dynamic titles: "Sign In" / "Create Account" / "Verify Email" based on mode
+    - Removed subtitle text ("Sign in to access your ideas" etc.)
+    - Changed input field borderRadius from 10 to 0 (sharp corners)
+  - Changed "Back to Home" text link to rectangular "BACK" button
+    - Positioned inside contentContainer, centered with other elements
+    - Rectangular shape with subtle border (rgba 0.4 opacity)
+    - Uses NotoSerif_400Regular font at 14px
