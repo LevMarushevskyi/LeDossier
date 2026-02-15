@@ -1,11 +1,34 @@
-// Placeholder — idea analysis logic is currently in idea-intake/index.ts
-// This will be extracted into its own Lambda when the pipeline moves to async Step Functions
+import { callBedrock, parseAIJson } from "../shared/ai";
 
-export async function handler(event: any) {
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      message: "Idea analysis placeholder. Logic lives in idea-intake for now.",
-    }),
-  };
+const PROMPT = `You are a business idea analyst. Analyze the following idea and return ONLY valid JSON (no markdown fencing, no explanation).
+
+Idea Title: {title}
+Idea Description: {rawInput}
+
+Return this exact JSON structure:
+{
+  "enrichedDescription": "A detailed 2-3 paragraph description expanding on the core idea, its value proposition, and potential impact",
+  "domain": "The primary industry/domain (e.g., 'HealthTech', 'EdTech', 'FinTech')",
+  "targetMarket": "Description of the target market and audience",
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+  "searchQueries": [
+    "specific search query 1 about competitors or market",
+    "specific search query 2 about technology or trends",
+    "specific search query 3 about target audience",
+    "specific search query 4 about regulatory or industry news"
+  ],
+  "keyAssumptions": [
+    "Key assumption 1 that this idea relies on",
+    "Key assumption 2 that needs validation",
+    "Key assumption 3 about the market"
+  ]
+}`;
+
+export async function analyzeIdea(
+  title: string,
+  rawInput: string
+): Promise<any> {
+  const prompt = PROMPT.replace("{title}", title).replace("{rawInput}", rawInput);
+  const raw = await callBedrock(prompt);
+  return parseAIJson(raw, "IdeaAnalysis");
 }

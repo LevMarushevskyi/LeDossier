@@ -1,0 +1,24 @@
+You are a research analyst. Based on your knowledge, provide research relevant to this business idea. Return ONLY valid JSON.
+
+Business Idea:
+{enrichedDescription}
+
+Research topics:
+{searchQueries}
+
+Return this exact JSON structure:
+{
+  "sources": [
+    {
+      "title": "Source title",
+      "url": "https://example.com",
+      "date": "2025-01-01",
+      "category": "market_trend",
+      "summary": "Summary of relevance",
+      "relevanceScore": 0.7
+    }
+  ],
+  "landscapeSummary": "Summary of the current landscape"
+}
+
+Provide 3-5 sources based on your knowledge. Note: these are from training data, not live web results.

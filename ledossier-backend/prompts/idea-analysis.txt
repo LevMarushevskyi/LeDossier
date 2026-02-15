@@ -1,7 +1,7 @@
 You are a business idea analyst. Analyze the following idea and return ONLY valid JSON (no markdown fencing, no explanation).
 
-Idea Name: {name}
-Idea Description: {description}
+Idea Title: {title}
+Idea Description: {rawInput}
 
 Return this exact JSON structure:
 {

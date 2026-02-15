@@ -1,11 +1,75 @@
-// Placeholder — SWOT generation logic is currently in idea-intake/index.ts
-// This will be extracted into its own Lambda when the pipeline moves to async Step Functions
+import { callBedrock, parseAIJson } from "../shared/ai";
 
-export async function handler(event: any) {
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      message: "SWOT generation placeholder. Logic lives in idea-intake for now.",
-    }),
-  };
+const PROMPT = `You are a strategic business analyst. Generate a SWOT analysis based on the idea analysis and research below. Return ONLY valid JSON (no markdown fencing, no explanation).
+
+IDEA ANALYSIS:
+{ideaAnalysis}
+
+RESEARCH RESULTS:
+{researchResults}
+
+Return this exact JSON structure:
+{
+  "swot": {
+    "strengths": [
+      "Specific strength 1 based on analysis",
+      "Specific strength 2 based on analysis",
+      "Specific strength 3 based on analysis"
+    ],
+    "weaknesses": [
+      "Specific weakness 1 based on analysis",
+      "Specific weakness 2 based on analysis",
+      "Specific weakness 3 based on analysis"
+    ],
+    "opportunities": [
+      "Specific opportunity 1 based on research",
+      "Specific opportunity 2 based on research",
+      "Specific opportunity 3 based on research"
+    ],
+    "threats": [
+      "Specific threat 1 based on research",
+      "Specific threat 2 based on research",
+      "Specific threat 3 based on research"
+    ]
+  },
+  "confidenceScore": 0.65,
+  "confidenceRationale": "Explanation of why this confidence level was assigned. 0.3-0.4 = questionable, 0.5-0.6 = plausible, 0.7-0.8 = strong evidence, 0.9+ = exceptionally rare",
+  "recommendedNextStep": "The single most impactful next step the founder should take"
+}
+
+Be specific, not generic. Reference actual findings from the research. Calibrate the confidence score carefully — most ideas should score 0.4-0.7.`;
+
+export async function generateSWOT(
+  ideaAnalysis: any,
+  researchResults: any
+): Promise<{ swotJson: any; swotMarkdown: string }> {
+  const prompt = PROMPT
+    .replace("{ideaAnalysis}", JSON.stringify(ideaAnalysis, null, 2))
+    .replace("{researchResults}", JSON.stringify(researchResults, null, 2));
+
+  const raw = await callBedrock(prompt);
+  const swotJson = parseAIJson(raw, "SWOTGeneration");
+
+  const swotMarkdown = `# SWOT Analysis
+
+## Strengths
+${swotJson.swot.strengths.map((s: string) => `- ${s}`).join("\n")}
+
+## Weaknesses
+${swotJson.swot.weaknesses.map((w: string) => `- ${w}`).join("\n")}
+
+## Opportunities
+${swotJson.swot.opportunities.map((o: string) => `- ${o}`).join("\n")}
+
+## Threats
+${swotJson.swot.threats.map((t: string) => `- ${t}`).join("\n")}
+
+---
+
+**Confidence Score**: ${swotJson.confidenceScore}
+**Rationale**: ${swotJson.confidenceRationale}
+**Recommended Next Step**: ${swotJson.recommendedNextStep}
+`;
+
+  return { swotJson, swotMarkdown };
 }
