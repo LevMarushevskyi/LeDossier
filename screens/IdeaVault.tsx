@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator, Dimensions, ScrollView, Button } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { NavigationProp } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -363,6 +363,11 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
             <Text key={i} style={styles.bulletItem}>• {item}</Text>
           ))}
 
+          <TouchableOpacity style={styles.deleteButton}
+            onPress={async () => {await handleDeleteDossier(activeDossier);setActiveDossier(null)}}>
+            <Text style={styles.deleteButtonText}>DELETE</Text>
+          </TouchableOpacity>
+
           {activeDossier.research?.sources && activeDossier.research.sources.length > 0 && (
             <>
               <Text style={styles.sectionHeader}>Research Sources</Text>
@@ -436,6 +441,20 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
 
     return <Text style={styles.boxText}>Your ideas will appear here</Text>;
   };
+
+  const handleDeleteDossier = async (idea: Dossier) => {
+    const index = ideas.indexOf(idea)
+    ideas.splice(index, 1);
+
+    const token = await getAuthToken();
+
+    await fetch(`${API_URL}/ideas/${idea.ideaId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
 
   const handleIdeaClick = (idea: Dossier) => {
     handleCardTap(idea);

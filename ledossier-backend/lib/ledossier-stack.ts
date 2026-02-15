@@ -206,6 +206,11 @@ export class LeDossierStack extends cdk.Stack {
       new apigateway.LambdaIntegration(ideaViewFn),
       { authorizer, authorizationType: apigateway.AuthorizationType.COGNITO }
     );
+    singleIdea.addMethod(
+      "DELETE",
+      new apigateway.LambdaIntegration(ideaViewFn), // or reuse existing fn
+      { authorizer, authorizationType: apigateway.AuthorizationType.COGNITO }
+    );
 
     // POST /surveillance/trigger → manual trigger for demo
     const surveillanceResource = api.root.addResource("surveillance");
