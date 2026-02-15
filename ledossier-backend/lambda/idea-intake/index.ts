@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, UpdateCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import { randomUUID } from "crypto";
@@ -262,10 +262,38 @@ async function storeToS3(key: string, body: string, contentType: string) {
   );
 }
 
+// --- GET Handler ---
+
+async function handleGetIdeas(event: any) {
+  const user = await getUserFromEvent(event);
+
+  const result = await ddb.send(
+    new QueryCommand({
+      TableName: IDEAS_TABLE,
+      KeyConditionExpression: "userId = :uid",
+      ExpressionAttributeValues: {
+        ":uid": user.userId,
+      },
+      ScanIndexForward: false,
+    })
+  );
+
+  return success({
+    ideas: result.Items ?? [],
+    count: result.Count ?? 0,
+  });
+}
+
 // --- Main Handler ---
 
 export async function handler(event: any) {
   try {
+    const method = event.httpMethod || event.requestContext?.http?.method || "POST";
+
+    if (method === "GET") {
+      return handleGetIdeas(event);
+    }
+
     // 1. Parse input
     const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
     const { title, rawInput } = body || {};

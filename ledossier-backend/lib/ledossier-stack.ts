@@ -121,6 +121,15 @@ export class LeDossierStack extends cdk.Stack {
       }
     );
 
+    ideasResource.addMethod(
+      "GET",
+      new apigateway.LambdaIntegration(ideaIntakeFn),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      }
+    );
+
     // --- Outputs ---
 
     new cdk.CfnOutput(this, "ApiUrl", {

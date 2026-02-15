@@ -119,6 +119,8 @@ Resources:
           UPDATES_TABLE: !Ref UpdatesTable
           DOSSIER_BUCKET: !Ref DossierBucket
           GEMINI_API_KEY: !Ref GeminiApiKey
+          USER_POOL_ID: us-east-1_XSZEJwbSO
+          USER_POOL_CLIENT_ID: 1n389pqmf8khutobtkj23rpd8n
 
   # --- API Gateway ---
 
@@ -149,7 +151,7 @@ Resources:
           - StatusCode: '200'
             ResponseParameters:
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"
-              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,POST,GET'"
               method.response.header.Access-Control-Allow-Origin: "'*'"
       MethodResponses:
         - StatusCode: '200'
@@ -172,10 +174,25 @@ Resources:
       MethodResponses:
         - StatusCode: '200'
 
-  ApiDeployment:
+  IdeasGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResourceId: !Ref IdeasResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${IdeaIntakeFunction.Arn}/invocations
+      MethodResponses:
+        - StatusCode: '200'
+
+  ApiDeploymentV2:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - IdeasPostMethod
+      - IdeasGetMethod
       - IdeasOptionsMethod
     Properties:
       RestApiId: !Ref ApiGateway
@@ -184,7 +201,7 @@ Resources:
     Type: AWS::ApiGateway::Stage
     Properties:
       RestApiId: !Ref ApiGateway
-      DeploymentId: !Ref ApiDeployment
+      DeploymentId: !Ref ApiDeploymentV2
       StageName: prod
 
   LambdaApiPermission:
@@ -194,6 +211,14 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/ideas
+
+  LambdaApiPermissionGet:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IdeaIntakeFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/GET/ideas
 
   # --- Lambda Function URL (no timeout cap) ---
 
@@ -206,6 +231,7 @@ Resources:
         AllowOrigins:
           - '*'
         AllowMethods:
+          - GET
           - POST
         AllowHeaders:
           - Content-Type
