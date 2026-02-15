@@ -591,3 +591,54 @@ BUG FIXES & CHANGES
   - Added try/catch wrapped signOut() before signIn() and signUp() calls
   - Silently ignores errors if no user is currently signed in
   - Resolves issue where users couldn't sign in or register due to persisted sessions
+
+[2026-02-15 16:00] Home.tsx and SignIn.tsx visual redesign
+  - Fixed duplicate StyleSheet.create blocks in Home.tsx from merge conflict
+  - Home page: papers.png with overlaid SIGN IN and CREATE ACCOUNT buttons
+    - SIGN IN positioned with transform: translateX(-120), translateY(-80), rotate(-30deg)
+    - CREATE ACCOUNT positioned with transform: translateX(80), translateY(-120), rotate(7deg)
+  - SignIn page: Added route params for initial mode (signIn vs register)
+    - useRoute with RouteProp to read mode param from navigation
+    - CREATE ACCOUNT on Home navigates to SignIn with { mode: 'register' }
+  - Added spyglass.png above title on SignIn page (150x150)
+  - Restored centerStrip SVG gradient and back button border styling on SignIn
+  - Changed input borderRadius from 10 to 0 for square inputs on SignIn
+
+[2026-02-15 16:30] IdeaVault button and indicator redesign
+  - Added stylus.png icon to IDEATE button, spyglass.png to SURVEILLANCE button
+  - Inverted button colors: dark background (#0C001A) with light text (#FFFDEE) and border
+  - Replaced colored viability badges (green/red) with trend.png arrows
+    - Arrow rotated 180deg for "up" direction, 0deg for "down"
+  - Removed all red and green colors from the entire project
+    - DraggableIdeaCard: replaced green dot (#4CAF50) with trend arrow
+    - IdeaVault: replaced confidence delta colors (#1a5c2a, #8b1a1a) with neutral rgba(255, 253, 238, 0.2)
+  - Inverted surveillance report section colors: dark bg (#0C001A), light text (#FFFDEE), light border
+  - Changed "All Ideas" nav button text to "Back"
+
+[2026-02-15 17:00] IdeaVault header and background redesign
+  - Replaced "Sign Out" text with exit.png icon (36x36)
+  - Added cream (#FFFDEE) rounded rectangle behind exit button (borderRadius: 10, padding: 8)
+  - Added centered door.png as background image in IdeaVault
+    - Size: 1280x1280, centered with left/top 50% + negative margins
+    - Fully opaque (opacity: 1), zIndex: 0 (renders above noise, below content)
+    - mainContent given zIndex: 2 to render above door
+  - Replaced door.png with door_but_vanilla.png for title icons (later removed)
+
+[2026-02-15 17:30] DraggableIdeaCard visual redesign
+  - Added file_texture.png as card background using layered Image + View approach
+  - Created textured dark outline: slightly larger tinted texture behind card
+    - Outline: top: -3, left: -3, width: CARD_WIDTH + 6, height: CARD_HEIGHT + 6
+    - tintColor: '#0C001A' for dark outline effect
+  - Text masked to bottom 60% of card with absolute positioning
+  - Card text color changed to dark (#0C001A) for contrast against texture
+  - Texture uses resizeMode="stretch" with explicit CARD_WIDTH/CARD_HEIGHT dimensions
+  - Replaced trend.png with arrow_but_dark.png for report indicator
+  - Arrow positioned at top: '30%', right: 4, size: 16x16
+
+[2026-02-15 18:00] IdeaVault title styling
+  - Removed door_but_vanilla.png icons from page title
+  - Added cream rounded rectangle background to "Idea Vault" title
+    - backgroundColor: '#FFFDEE', borderRadius: 16
+    - paddingVertical: 10, paddingHorizontal: 30
+  - Changed title text color to dark (#0C001A)
+  - Added fontWeight: 'bold' to page title

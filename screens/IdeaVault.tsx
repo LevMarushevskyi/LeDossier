@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ActivityIndicator, Dimensions, ScrollView, Image } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { NavigationProp } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -316,17 +316,14 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
             >
               <View style={styles.reportHeader}>
                 <Text style={styles.reportTitle}>SURVEILLANCE REPORT</Text>
-                <View style={[
-                  styles.briefingViabilityBadge,
-                  activeDossier.latestReport.viabilityDirection === 'up' && styles.briefingViabilityUp,
-                  activeDossier.latestReport.viabilityDirection === 'down' && styles.briefingViabilityDown,
-                  activeDossier.latestReport.viabilityDirection === 'stable' && styles.briefingViabilityStable,
-                ]}>
-                  <Text style={styles.briefingViabilityText}>
-                    {activeDossier.latestReport.viabilityDirection === 'up' ? 'Trending Up' :
-                     activeDossier.latestReport.viabilityDirection === 'down' ? 'Trending Down' : 'Stable'}
-                  </Text>
-                </View>
+                <Image
+                  source={require('../assets/trend.png')}
+                  style={[
+                    styles.trendArrow,
+                    activeDossier.latestReport.viabilityDirection === 'down' && styles.trendArrowDown,
+                  ]}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.reportHeadline}>{activeDossier.latestReport.headline}</Text>
               <Text style={styles.reportBody} numberOfLines={2}>
@@ -667,18 +664,21 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={styles.container}>
       <BackgroundNoise baseColor="#0C001A" opacity={0.2} />
+      <Image source={require('../assets/door.png')} style={styles.backgroundDoor} resizeMode="contain" />
 
         {activeDossier && (
           <TouchableOpacity style={styles.navButton} onPress={() => setActiveDossier(null)}>
-            <Text style={styles.navButtonText}>All Ideas</Text>
+            <Text style={styles.navButtonText}>Back</Text>
           </TouchableOpacity>
         )}
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutButtonText}>Sign Out</Text>
+        <Image source={require('../assets/exit.png')} style={styles.signOutIcon} resizeMode="contain" />
       </TouchableOpacity>
 
       <View style={styles.mainContent}>
-        <Text style={styles.pageTitle}>Idea Vault</Text>
+        <View style={styles.pageTitleRow}>
+          <Text style={styles.pageTitle}>Idea Vault</Text>
+        </View>
         <View
           style={[styles.contentBox, (loading || errorMsg || activeDossier) && styles.contentBoxFill]}
           onLayout={(event) => {
@@ -726,6 +726,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
             onPress={() => setShowPanel(true)}
             disabled={loading}
           >
+            <Image source={require('../assets/stylus.png')} style={styles.buttonIcon} resizeMode="contain" />
             <Text style={styles.actionButtonText}>{loading ? 'PROCESSING...' : 'IDEATE'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -733,6 +734,7 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
             onPress={handleRunSurveillance}
             disabled={surveillanceLoading}
           >
+            <Image source={require('../assets/spyglass.png')} style={styles.buttonIcon} resizeMode="contain" />
             <Text style={styles.actionButtonText}>{surveillanceLoading ? 'SWEEPING...' : 'SURVEILLANCE'}</Text>
           </TouchableOpacity>
         </View>
@@ -802,17 +804,14 @@ export default function IdeaVault({ navigation }: IdeaVaultProps) {
                 <>
                   <View style={styles.reportModalHeader}>
                     <Text style={styles.reportModalTitle}>SURVEILLANCE REPORT</Text>
-                    <View style={[
-                      styles.briefingViabilityBadge,
-                      report.viabilityDirection === 'up' && styles.briefingViabilityUp,
-                      report.viabilityDirection === 'down' && styles.briefingViabilityDown,
-                      report.viabilityDirection === 'stable' && styles.briefingViabilityStable,
-                    ]}>
-                      <Text style={styles.briefingViabilityText}>
-                        {report.viabilityDirection === 'up' ? 'Trending Up' :
-                         report.viabilityDirection === 'down' ? 'Trending Down' : 'Stable'}
-                      </Text>
-                    </View>
+                    <Image
+                      source={require('../assets/trend.png')}
+                      style={[
+                        styles.trendArrow,
+                        report.viabilityDirection === 'down' && styles.trendArrowDown,
+                      ]}
+                      resizeMode="contain"
+                    />
                   </View>
                   <ScrollView style={styles.reportModalScroll} showsVerticalScrollIndicator={true}>
                     <Text style={styles.reportModalHeadline}>{report.headline}</Text>
@@ -875,6 +874,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0C001A',
   },
+  backgroundDoor: {
+    position: 'absolute',
+    width: 1280,
+    height: 1280,
+    left: '50%',
+    top: '50%',
+    marginLeft: -640,
+    marginTop: -640,
+    opacity: 1,
+    zIndex: 0,
+  },
   navButton: {
     position: 'absolute',
     top: 40,
@@ -895,17 +905,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 40,
     right: 20,
-    backgroundColor: '#FFFDEE',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
     zIndex: 100,
+    backgroundColor: '#FFFDEE',
+    padding: 8,
+    borderRadius: 10,
   },
-  signOutButtonText: {
-    fontFamily: 'NotoSerif_400Regular',
-    color: '#0C001A',
-    fontSize: 14,
-    fontWeight: 'bold',
+  signOutIcon: {
+    width: 36,
+    height: 36,
   },
   mainContent: {
     flex: 1,
@@ -913,12 +920,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 90,
     paddingHorizontal: 20,
+    zIndex: 2,
+  },
+  pageTitleRow: {
+    backgroundColor: '#FFFDEE',
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    marginBottom: 30,
+    alignItems: 'center',
   },
   pageTitle: {
     fontFamily: 'PetitFormalScript_400Regular',
     fontSize: 48,
-    color: '#FFFDEE',
-    marginBottom: 30,
+    fontWeight: 'bold',
+    color: '#0C001A',
   },
   contentBox: {
     width: '90%',
@@ -952,16 +968,25 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   actionButton: {
-    backgroundColor: '#FFFDEE',
+    backgroundColor: '#0C001A',
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#FFFDEE',
   },
   actionButtonText: {
     fontFamily: 'NotoSerif_400Regular',
-    color: '#0C001A',
+    color: '#FFFDEE',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  buttonIcon: {
+    width: 24,
+    height: 24,
   },
   backButton: {
     backgroundColor: '#FFFDEE',
@@ -1311,30 +1336,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  briefingViabilityBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+  trendArrow: {
+    width: 24,
+    height: 24,
+    transform: [{ rotate: '180deg' }],
   },
-  briefingViabilityUp: {
-    backgroundColor: '#1a5c2a',
-  },
-  briefingViabilityDown: {
-    backgroundColor: '#8b1a1a',
-  },
-  briefingViabilityStable: {
-    backgroundColor: '#0C001A',
-  },
-  briefingViabilityText: {
-    fontFamily: 'NotoSerif_400Regular',
-    fontSize: 11,
-    color: '#FFFDEE',
-    fontWeight: 'bold',
+  trendArrowDown: {
+    transform: [{ rotate: '0deg' }],
   },
   reportSection: {
-    backgroundColor: 'rgba(12, 0, 26, 0.08)',
+    backgroundColor: '#0C001A',
     borderLeftWidth: 4,
-    borderLeftColor: '#0C001A',
+    borderLeftColor: '#FFFDEE',
     borderRadius: 8,
     padding: 14,
     marginBottom: 16,
@@ -1349,20 +1362,20 @@ const styles = StyleSheet.create({
     fontFamily: 'NotoSerif_400Regular',
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#0C001A',
+    color: '#FFFDEE',
     letterSpacing: 1,
   },
   reportHeadline: {
     fontFamily: 'NotoSerif_400Regular',
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#0C001A',
+    color: '#FFFDEE',
     marginBottom: 8,
   },
   reportBody: {
     fontFamily: 'NotoSerif_400Regular',
     fontSize: 13,
-    color: '#0C001A',
+    color: '#FFFDEE',
     lineHeight: 20,
     marginBottom: 10,
   },
@@ -1423,13 +1436,13 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   confidenceDeltaUp: {
-    backgroundColor: '#1a5c2a',
+    backgroundColor: 'rgba(255, 253, 238, 0.2)',
   },
   confidenceDeltaDown: {
-    backgroundColor: '#8b1a1a',
+    backgroundColor: 'rgba(255, 253, 238, 0.2)',
   },
   confidenceDeltaStable: {
-    backgroundColor: '#555',
+    backgroundColor: 'rgba(255, 253, 238, 0.1)',
   },
   confidenceDeltaText: {
     fontFamily: 'NotoSerif_400Regular',
@@ -1456,7 +1469,7 @@ const styles = StyleSheet.create({
   reportTapHint: {
     fontFamily: 'NotoSerif_400Regular',
     fontSize: 11,
-    color: '#0C001A',
+    color: '#FFFDEE',
     opacity: 0.5,
     fontStyle: 'italic',
     marginTop: 4,
