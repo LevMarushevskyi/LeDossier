@@ -1,8 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { NavigationProp } from '@react-navigation/native';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import BackgroundNoise from '../components/BackgroundNoise';
 
 interface SignInProps {
@@ -10,7 +9,6 @@ interface SignInProps {
 }
 
 export default function SignIn({ navigation }: SignInProps) {
-  const gradientId = useMemo(() => `stripFade-signin-${Math.random().toString(36).substr(2, 9)}`, []);
   const { login, register, confirmRegistration } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,26 +89,14 @@ export default function SignIn({ navigation }: SignInProps) {
     >
       <BackgroundNoise baseColor="#0C001A" opacity={0.2} />
 
-      <View style={styles.centerStrip}>
-        <Svg width="100%" height="100%">
-          <Defs>
-            <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
-              <Stop offset="0" stopColor="#0C001A" stopOpacity="0" />
-              <Stop offset="0.25" stopColor="#0C001A" stopOpacity="1" />
-              <Stop offset="0.75" stopColor="#0C001A" stopOpacity="1" />
-              <Stop offset="1" stopColor="#0C001A" stopOpacity="0" />
-            </LinearGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradientId})`} />
-        </Svg>
-      </View>
-
       <View style={styles.contentContainer}>
-        <Text style={styles.title}>
-          {mode === 'signIn' ? 'Sign In' :
-           mode === 'register' ? 'Create Account' :
-           'Verify Email'}
+        <Text style={styles.title}>Le Dossier</Text>
+        <Text style={styles.subtitle}>
+          {mode === 'signIn' ? 'Sign in to access your ideas' :
+           mode === 'register' ? 'Create your account' :
+           'Check your email for a verification code'}
         </Text>
+
         {mode !== 'confirmCode' ? (
           <>
             <TextInput
@@ -194,7 +180,7 @@ export default function SignIn({ navigation }: SignInProps) {
           style={styles.backButton}
           onPress={() => navigation.navigate('Home')}
         >
-          <Text style={styles.backButtonText}>BACK</Text>
+          <Text style={styles.backButtonText}>Back to Home</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -205,13 +191,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0C001A',
-  },
-  centerStrip: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: '10%',
-    right: '10%',
   },
   contentContainer: {
     flex: 1,
@@ -239,7 +218,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 253, 238, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(255, 253, 238, 0.3)',
-    borderRadius: 0,
+    borderRadius: 10,
     padding: 15,
     marginBottom: 15,
     color: '#FFFDEE',
@@ -274,7 +253,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontFamily: 'NotoSerif_400Regular',
-    color: '#FFFDEE',
+    color: '#ff6b6b',
     fontSize: 14,
     marginTop: 15,
     fontWeight: 'bold',
@@ -285,14 +264,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     marginTop: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 253, 238, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   backButtonText: {
     fontFamily: 'NotoSerif_400Regular',
     color: '#FFFDEE',
     fontSize: 14,
+    textDecorationLine: 'underline',
   },
 });
