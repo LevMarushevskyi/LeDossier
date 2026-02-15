@@ -4,7 +4,7 @@
     "slug": "LeDossier",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/door.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -19,19 +19,13 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/door.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.ledossier.app",
       "versionCode": 1
     },
-    "extra": {
-      "eas": {
-        "projectId": ""
-      }
-    },
-    "owner": "",
     "plugins": [
       "expo-font"
     ]

@@ -1,6 +1,11 @@
 import { View, Text, StyleSheet, Button } from 'react-native';
+import { NavigationProp } from '@react-navigation/native';
 
-export default function Notification({ navigation }) {
+interface NotificationProps {
+  navigation: NavigationProp<any>;
+}
+
+export default function Notification({ navigation }: NotificationProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Notification</Text>

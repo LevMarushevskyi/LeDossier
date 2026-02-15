@@ -1,20 +1,23 @@
-import { View, Text, StyleSheet, Button, useWindowDimensions, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
-import { GLView } from 'expo-gl';
-import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { useState } from 'react';
+import { NavigationProp } from '@react-navigation/native';
 
-export default function IdeaVault({ navigation }) {
-  const { width, height } = useWindowDimensions();
-  const [glKey, setGlKey] = useState(0);
+interface Idea {
+  name: string;
+  description: string;
+  id: number;
+}
+
+interface IdeaVaultProps {
+  navigation: NavigationProp<any>;
+}
+
+export default function IdeaVault({ navigation }: IdeaVaultProps) {
   const [showPanel, setShowPanel] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [ideas, setIdeas] = useState([]);
-  const borderWidth = 10;
-
-  useEffect(() => {
-    setGlKey(prev => prev + 1);
-  }, []);
+  const [ideas, setIdeas] = useState<Idea[]>([]);
 
   const handleConfirm = () => {
     if (!name.trim() || !description.trim()) {
@@ -38,91 +41,32 @@ export default function IdeaVault({ navigation }) {
     setDescription('');
   };
 
-  const onContextCreate = (gl) => {
-    const vertShader = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertShader, `
-      attribute vec2 position;
-      void main() {
-        gl_Position = vec4(position, 0.0, 1.0);
-      }
-    `);
-    gl.compileShader(vertShader);
-
-    const fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragShader, `
-      precision mediump float;
-      uniform vec2 resolution;
-      
-      void main() {
-        vec2 uv = gl_FragCoord.xy / resolution;
-        
-        float angle = radians(30.0);
-        float cosA = cos(angle);
-        float sinA = sin(angle);
-        vec2 rotated = vec2(
-          gl_FragCoord.x * cosA - gl_FragCoord.y * sinA,
-          gl_FragCoord.x * sinA + gl_FragCoord.y * cosA
-        );
-        
-        float wave = sin(rotated.x * 0.02) * 10.0;
-        float lineSpacing = 10.0;
-        float linePattern = mod(rotated.y + wave, lineSpacing);
-        float line = step(linePattern, 4.0);
-        
-        float gradient = 1.0 - uv.y;
-        float alpha = gradient * 0.3;
-        
-        vec3 baseColor = vec3(0.047, 0.0, 0.102);
-        vec3 lineColor = vec3(1.0, 0.992, 0.933);
-        vec3 color = mix(baseColor, lineColor, line * alpha);
-        
-        gl_FragColor = vec4(color, 1.0);
-      }
-    `);
-    gl.compileShader(fragShader);
-
-    const program = gl.createProgram();
-    gl.attachShader(program, vertShader);
-    gl.attachShader(program, fragShader);
-    gl.linkProgram(program);
-    gl.useProgram(program);
-
-    const positionLocation = gl.getAttribLocation(program, 'position');
-    const resolutionLocation = gl.getUniformLocation(program, 'resolution');
-    
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-    
-    gl.uniform2f(resolutionLocation, width, height);
-    gl.viewport(0, 0, width, height);
-    gl.clearColor(0.047, 0.0, 0.102, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    gl.flush();
-    gl.endFrameEXP();
-  };
-
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.notifButton} onPress={() => navigation.navigate('Notification')}>
-        <Text style={styles.buttonText}>N</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.settingsButton} onPress={() => navigation.navigate('Setting')}>
-        <Text style={styles.buttonText}>S</Text>
-      </TouchableOpacity>
-      <View style={[styles.rectContainer, { width: width * 0.8, height: height * 0.8 }]}>
-        <GLView key={glKey} style={StyleSheet.absoluteFill} onContextCreate={onContextCreate} />
-        <View style={[styles.innerRect, { margin: borderWidth }]} />
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Notification')}>
+          <Text style={styles.navButtonText}>Notifications</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Setting')}>
+          <Text style={styles.navButtonText}>Settings</Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.addButton} onPress={() => setShowPanel(true)}>
-        <Text style={styles.addButtonText}>IDEATE</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.testButton} onPress={() => navigation.navigate('Home')}>
-        <Text style={styles.testButtonText}>For testing purposes</Text>
-      </TouchableOpacity>
+
+      <View style={styles.mainContent}>
+        <Text style={styles.pageTitle}>Idea Vault</Text>
+        <View style={styles.contentBox}>
+          <Text style={styles.boxText}>Your ideas will appear here</Text>
+        </View>
+      </View>
+
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => setShowPanel(true)}>
+          <Text style={styles.actionButtonText}>IDEATE</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Home')}>
+          <Text style={styles.backButtonText}>Back to Home</Text>
+        </TouchableOpacity>
+      </View>
       <Modal visible={showPanel} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.panel}>
@@ -169,48 +113,80 @@ export default function IdeaVault({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#0C001A',
   },
-  rectContainer: {
-    position: 'relative',
-    marginBottom: 20,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 20,
+    paddingTop: 40,
   },
-  innerRect: {
-    flex: 1,
+  navButton: {
     backgroundColor: '#FFFDEE',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
   },
-  notifButton: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-    backgroundColor: '#FFFDEE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  settingsButton: {
-    position: 'absolute',
-    top: 80,
-    left: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-    backgroundColor: '#FFFDEE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonText: {
+  navButtonText: {
     color: '#0C001A',
-    fontSize: 24,
+    fontSize: 14,
     fontWeight: 'bold',
+  },
+  mainContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  pageTitle: {
+    fontFamily: 'PetitFormalScript_400Regular',
+    fontSize: 48,
+    color: '#FFFDEE',
+    marginBottom: 30,
+  },
+  contentBox: {
+    width: '90%',
+    height: '60%',
+    backgroundColor: '#FFFDEE',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  boxText: {
+    color: '#0C001A',
+    fontSize: 18,
+  },
+  footer: {
+    padding: 20,
+    alignItems: 'center',
+    gap: 10,
+  },
+  actionButton: {
+    backgroundColor: '#FFFDEE',
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  actionButtonText: {
+    color: '#0C001A',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  backButton: {
+    backgroundColor: '#FFFDEE',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  backButtonText: {
+    color: '#0C001A',
+    fontSize: 14,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(12, 0, 26, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
