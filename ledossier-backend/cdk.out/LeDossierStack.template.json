@@ -67,7 +67,17 @@
   "DossierBucket461F6066": {
    "Type": "AWS::S3::Bucket",
    "Properties": {
-    "BucketName": "ledossier-dossiers-129751814064",
+    "BucketName": {
+     "Fn::Join": [
+      "",
+      [
+       "ledossier-dossiers-",
+       {
+        "Ref": "AWS::AccountId"
+       }
+      ]
+     ]
+    },
     "Tags": [
      {
       "Key": "aws-cdk:auto-delete-objects",
@@ -187,7 +197,9 @@
    "Type": "AWS::Lambda::Function",
    "Properties": {
     "Code": {
-     "S3Bucket": "cdk-hnb659fds-assets-129751814064-us-east-1",
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+     },
      "S3Key": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip"
     },
     "Timeout": 900,
@@ -393,8 +405,10 @@
    "Type": "AWS::Lambda::Function",
    "Properties": {
     "Code": {
-     "S3Bucket": "cdk-hnb659fds-assets-129751814064-us-east-1",
-     "S3Key": "5c108b2a78c9f002d37688c327931fca7628f41d95cbbd155e22fc2e94030477.zip"
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-us-east-1"
+     },
+     "S3Key": "3ffdc8617bec0081f35e00415d506f3ed12518e90e237df8f263b6b725c3cc4f.zip"
     },
     "Environment": {
      "Variables": {
@@ -407,7 +421,9 @@
       "DOSSIER_BUCKET": {
        "Ref": "DossierBucket461F6066"
       },
-      "GEMINI_API_KEY": "PLACEHOLDER"
+      "GEMINI_API_KEY": "PLACEHOLDER",
+      "USER_POOL_ID": "us-east-1_XSZEJwbSO",
+      "USER_POOL_CLIENT_ID": "1n389pqmf8khutobtkj23rpd8n"
      }
     },
     "Handler": "index.handler",
@@ -427,7 +443,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "LeDossierStack/IdeaIntakeFn/Resource",
-    "aws:asset:path": "/Users/del/LeGS/ledossier-backend",
+    "aws:asset:path": "asset.3ffdc8617bec0081f35e00415d506f3ed12518e90e237df8f263b6b725c3cc4f",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -496,7 +512,7 @@
     "aws:cdk:path": "LeDossierStack/LeDossierApi/Account"
    }
   },
-  "LeDossierApiDeploymentE5E79E83bda719e8c5948d353e86e13eae7668bc": {
+  "LeDossierApiDeploymentE5E79E83d91a83d8b07f0bb991771886f49a9757": {
    "Type": "AWS::ApiGateway::Deployment",
    "Properties": {
     "Description": "Automatically created by the RestApi construct",
@@ -519,7 +535,7 @@
    "Type": "AWS::ApiGateway::Stage",
    "Properties": {
     "DeploymentId": {
-     "Ref": "LeDossierApiDeploymentE5E79E83bda719e8c5948d353e86e13eae7668bc"
+     "Ref": "LeDossierApiDeploymentE5E79E83d91a83d8b07f0bb991771886f49a9757"
     },
     "RestApiId": {
      "Ref": "LeDossierApiC4005682"
@@ -659,7 +675,11 @@
        {
         "Ref": "AWS::Partition"
        },
-       ":execute-api:us-east-1:129751814064:",
+       ":execute-api:us-east-1:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
        {
         "Ref": "LeDossierApiC4005682"
        },
@@ -695,7 +715,11 @@
        {
         "Ref": "AWS::Partition"
        },
-       ":execute-api:us-east-1:129751814064:",
+       ":execute-api:us-east-1:",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
        {
         "Ref": "LeDossierApiC4005682"
        },
@@ -711,7 +735,10 @@
   "LeDossierApiideasPOSTF5D98910": {
    "Type": "AWS::ApiGateway::Method",
    "Properties": {
-    "AuthorizationType": "NONE",
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "CognitoAuthorizerF3215DBC"
+    },
     "HttpMethod": "POST",
     "Integration": {
      "IntegrationHttpMethod": "POST",
@@ -747,10 +774,42 @@
     "aws:cdk:path": "LeDossierStack/LeDossierApi/Default/ideas/POST/Resource"
    }
   },
+  "CognitoAuthorizerF3215DBC": {
+   "Type": "AWS::ApiGateway::Authorizer",
+   "Properties": {
+    "IdentitySource": "method.request.header.Authorization",
+    "Name": "LeDossierStackCognitoAuthorizer08CE234C",
+    "ProviderARNs": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":cognito-idp:us-east-1:",
+        {
+         "Ref": "AWS::AccountId"
+        },
+        ":userpool/us-east-1_XSZEJwbSO"
+       ]
+      ]
+     }
+    ],
+    "RestApiId": {
+     "Ref": "LeDossierApiC4005682"
+    },
+    "Type": "COGNITO_USER_POOLS"
+   },
+   "Metadata": {
+    "aws:cdk:path": "LeDossierStack/CognitoAuthorizer/Resource"
+   }
+  },
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/21Ry07DMBD8Fu6OQSkHrimIG1AV7pFjL2WT2I6ydqsoyr/jRyAV4jSzs4/xrkte7h743Y24UCFVV/TY8PndCdmxINWzmozQVgXxQzQ9sMdPk8jCaMfnvZcduCiuLMPB9iinTV7jHOwFhe5e6EaJ2lgFLfHXBM/eSIfWMBSaz0eb7RJuEzOL9rUgAke8irAO5HMo+Z0Ty2HUSBSihYkBT8LBRUxhOpCrBkwGG62ktN449gRDbycNJu12FYXLnNKrMgmt1o8S4k7sBdyXVTG5sp/sapL4slzJnpzV/1X9SR1Ge0YFY7JJ60Z7NKfY8+bd4N3C4il5S7fn8p7HH20JsRjDNqiBHzN+A+TeQBbuAQAA"
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/21QwW7CMAz9Fu4hG7DDroVpt22obGcUUlMMbVzFDqir+u9T0g6YtNN7tpP3nj3X88WzfpyYC09tcZpWuNPdRow9KXPhbVe0ztRU7HT3aXYVqNXeJdIrXuhuGewJJDZHNsCaKrTtrT3WQ7E0DL2qTL0rzNZRAUfW7wleg7OC5BSaWnc5DXYJb4oDi/ZbwwzCOoswCuputXdXnfgcfI3MSK5XpsHSCFxMq7scWLIGk8GNZtZScKJeoKmorcGl3e6qjZgypRpIDkzBW4g7qTeQAxVxOLLf6WgyciodCn0x+DVRxVmQA3n8Bp8CXKu+v/sfWKj+X+7PaO3pjAX4lCfdJeZEV8Y/H0GaIL2KN9dHfjjPn/RsoWeTIyNOfXCCNeh8wB9MyjNGGAIAAA=="
    },
    "Metadata": {
     "aws:cdk:path": "LeDossierStack/CDKMetadata/Default"
