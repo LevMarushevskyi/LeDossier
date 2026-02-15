@@ -106,6 +106,24 @@ export class PhysicsEngine {
     }
   }
 
+  updateCardRotation(id: string, angle: number): void {
+    const body = this.bodies.get(id);
+    if (body) {
+      // Wake the body to ensure physics continues
+      Matter.Sleeping.set(body, false);
+
+      Matter.Body.setAngle(body, angle)
+    }
+  }
+
+  pausePhysicsUpdates(id: string) {
+    const body = this.bodies.get(id);
+    if (body) {
+      // Wake the body before applying velocity
+      Matter.Sleeping.set(body, true);
+    }
+  }
+
   applyDragRelease(id: string, velocityX: number, velocityY: number): void {
     const body = this.bodies.get(id);
     if (body) {
